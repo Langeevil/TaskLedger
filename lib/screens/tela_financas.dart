@@ -2,6 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/transacao_model.dart';
+import '../services/transacao_service.dart';
+import '../utils/app_currency_utils.dart';
+import '../utils/app_date_utils.dart';
+
 class TelaFinancas extends StatefulWidget {
   const TelaFinancas({
     super.key,
@@ -25,7 +30,7 @@ class TelaFinancas extends StatefulWidget {
 }
 
 class _TelaFinancasState extends State<TelaFinancas> {
-  final _firestore = FirebaseFirestore.instance;
+  final _transacaoService = TransacaoService();
   String _filtroTipo = 'todos';
   String _filtroPeriodo = 'mes';
 
@@ -52,82 +57,23 @@ class _TelaFinancasState extends State<TelaFinancas> {
   }
 
   DateTime? _converterParaDateTime(dynamic valor) {
-    if (valor is Timestamp) {
-      return valor.toDate();
-    }
-    if (valor is DateTime) {
-      return valor;
-    }
-    if (valor is String && valor.trim().isNotEmpty) {
-      return DateTime.tryParse(valor);
-    }
-    return null;
+    return AppDateUtils.parse(valor);
   }
 
   int _compararDatas(dynamic esquerda, dynamic direita) {
-    final dataEsquerda = _converterParaDateTime(esquerda);
-    final dataDireita = _converterParaDateTime(direita);
-
-    if (dataEsquerda == null && dataDireita == null) {
-      return 0;
-    }
-    if (dataEsquerda == null) {
-      return 1;
-    }
-    if (dataDireita == null) {
-      return -1;
-    }
-
-    return dataEsquerda.compareTo(dataDireita);
+    return AppDateUtils.compareNullable(esquerda, direita);
   }
 
   double _converterParaDouble(dynamic valor) {
-    if (valor is num) {
-      return valor.toDouble();
-    }
-    if (valor is String) {
-      return _parseMoedaBrasileira(valor);
-    }
-    return 0;
+    return AppCurrencyUtils.parse(valor);
   }
 
   String _formatarMoeda(double valor) {
-    final numero = _formatarNumeroReal(valor.abs());
-    final sinal = valor < 0 ? '-' : '';
-    return '${sinal}R\$ $numero';
-  }
-
-  double _parseMoedaBrasileira(String valor) {
-    final textoLimpo = valor.replaceAll(RegExp(r'[^0-9,.-]'), '');
-    if (textoLimpo.isEmpty) {
-      return 0;
-    }
-
-    final normalizado = textoLimpo.replaceAll('.', '').replaceAll(',', '.');
-    return double.tryParse(normalizado) ?? 0;
-  }
-
-  String _formatarNumeroReal(double valor) {
-    final partes = valor.toStringAsFixed(2).split('.');
-    final inteiro = partes[0];
-    final decimal = partes[1];
-    final buffer = StringBuffer();
-
-    for (int i = 0; i < inteiro.length; i++) {
-      final indiceRestante = inteiro.length - i;
-      buffer.write(inteiro[i]);
-      if (indiceRestante > 1 && indiceRestante % 3 == 1) {
-        buffer.write('.');
-      }
-    }
-
-    return '${buffer.toString()},$decimal';
+    return AppCurrencyUtils.format(valor);
   }
 
   String _formatarData(DateTime data) {
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-    return '$dia/$mes/${data.year}';
+    return AppDateUtils.format(data);
   }
 
   Future<void> _abrirModalLancamento({Map<String, dynamic>? transacao}) async {
@@ -183,7 +129,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
       return;
     }
 
-    await _firestore.collection('transacoes').doc(id).delete();
+    await _transacaoService.delete(id);
     await widget.onDadosAtualizados();
   }
 
@@ -622,7 +568,7 @@ class _ModalLancamento extends StatefulWidget {
 
 class _ModalLancamentoState extends State<_ModalLancamento> {
   final _formKey = GlobalKey<FormState>();
-  final _firestore = FirebaseFirestore.instance;
+  final _transacaoService = TransacaoService();
   final _controladorTitulo = TextEditingController();
   final _controladorValor = TextEditingController();
   final _controladorObservacao = TextEditingController();
@@ -734,28 +680,22 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
       _salvando = true;
     });
 
-    final dados = <String, dynamic>{
-      'uid': widget.uid,
-      'titulo': _controladorTitulo.text.trim(),
-      'tipo': _tipo,
-      'categoria': _categoria,
-      'valor': _parseValor(),
-      'data': Timestamp.fromDate(_data!),
-      'observacao': _controladorObservacao.text.trim(),
-      'atualizadoEm': FieldValue.serverTimestamp(),
-    };
+    final transacao = TransacaoModel(
+      id: widget.transacao?['id']?.toString(),
+      uid: widget.uid,
+      titulo: _controladorTitulo.text.trim(),
+      tipo: _tipo,
+      categoria: _categoria,
+      valor: _parseValor(),
+      data: _data,
+      observacao: _controladorObservacao.text.trim(),
+    );
 
     try {
       if (_editando) {
-        await _firestore
-            .collection('transacoes')
-            .doc(widget.transacao!['id'])
-            .update(dados);
+        await _transacaoService.update(transacao);
       } else {
-        await _firestore.collection('transacoes').add({
-          ...dados,
-          'criadoEm': FieldValue.serverTimestamp(),
-        });
+        await _transacaoService.create(transacao);
       }
 
       await widget.onSalvou();

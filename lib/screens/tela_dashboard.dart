@@ -1,6 +1,8 @@
 ﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/dashboard_service.dart';
 
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
@@ -14,12 +16,8 @@ class TelaDashboard extends StatefulWidget {
 }
 
 class _TelaDashboardState extends State<TelaDashboard> {
-  static const String _colecaoUsuarios = 'users';
-  static const String _colecaoTarefas = 'tarefas';
-  static const String _colecaoTransacoes = 'transacoes';
-
-  final _autenticacao = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final _authService = AuthService();
+  final _dashboardService = DashboardService();
 
   int _indiceTelaAtual = 0;
   late User _usuarioAtual;
@@ -39,65 +37,24 @@ class _TelaDashboardState extends State<TelaDashboard> {
   @override
   void initState() {
     super.initState();
-    _usuarioAtual = _autenticacao.currentUser!;
+    _usuarioAtual = _authService.currentUser!;
     _carregarDados();
   }
 
   Future<void> _carregarDados() async {
     try {
-      final documentoUsuario = await _firestore
-          .collection(_colecaoUsuarios)
-          .doc(_usuarioAtual.uid)
-          .get();
+      final dashboardData = await _dashboardService.carregarDados(
+        uid: _usuarioAtual.uid,
+        email: _usuarioAtual.email ?? 'Nao informado',
+      );
 
-      Map<String, dynamic> dadosUsuario;
-      if (!documentoUsuario.exists) {
-        dadosUsuario = {
-          'uid': _usuarioAtual.uid,
-          'email': _usuarioAtual.email ?? 'Nao informado',
-          'nome': 'Usuario',
-          'telefone': 'Nao informado',
-          'dataCriacao': DateTime.now(),
-        };
-
-        await _firestore
-            .collection(_colecaoUsuarios)
-            .doc(_usuarioAtual.uid)
-            .set(dadosUsuario);
-      } else {
-        dadosUsuario = documentoUsuario.data() ?? {};
-      }
-
-      final consultaTarefas = await _firestore
-          .collection(_colecaoTarefas)
-          .where('uid', isEqualTo: _usuarioAtual.uid)
-          .get();
-
-      final consultaTransacoes = await _firestore
-          .collection(_colecaoTransacoes)
-          .where('uid', isEqualTo: _usuarioAtual.uid)
-          .get();
-
-      final tarefas = consultaTarefas.docs.map((doc) {
-        return {...doc.data(), 'id': doc.id};
-      }).toList()..sort((a, b) => _compararDatas(a['prazo'], b['prazo']));
-
-      final transacoes = consultaTransacoes.docs.map((doc) {
-        return {...doc.data(), 'id': doc.id};
-      }).toList()..sort((a, b) => _compararDatas(b['data'], a['data']));
-
-      double totalReceitas = 0;
-      double totalGastos = 0;
-      for (final transacao in transacoes) {
-        final valor = _converterParaDouble(transacao['valor']);
-        final tipo = transacao['tipo']?.toString().toLowerCase() ?? '';
-
-        if (tipo == 'receita') {
-          totalReceitas += valor;
-        } else if (tipo == 'despesa') {
-          totalGastos += valor;
-        }
-      }
+      final dadosUsuario = dashboardData.usuario.toMap();
+      final tarefas = dashboardData.tarefas
+          .map((tarefa) => tarefa.toMap())
+          .toList();
+      final transacoes = dashboardData.transacoes
+          .map((transacao) => transacao.toMap())
+          .toList();
 
       if (!mounted) {
         return;
@@ -108,10 +65,10 @@ class _TelaDashboardState extends State<TelaDashboard> {
         _dadosUsuario = _normalizarDadosUsuario(dadosUsuario);
         _tarefas = tarefas;
         _transacoes = transacoes;
-        _totalTarefas = tarefas.length;
-        _totalReceitas = totalReceitas;
-        _totalGastos = totalGastos;
-        _saldo = totalReceitas - totalGastos;
+        _totalTarefas = dashboardData.totalTarefas;
+        _totalReceitas = dashboardData.totalReceitas;
+        _totalGastos = dashboardData.totalGastos;
+        _saldo = dashboardData.saldo;
         _carregando = false;
       });
     } catch (_) {
@@ -174,23 +131,6 @@ class _TelaDashboardState extends State<TelaDashboard> {
     }
 
     return nomeCompleto.trim().split(RegExp(r'\s+')).first;
-  }
-
-  int _compararDatas(dynamic esquerda, dynamic direita) {
-    final dataEsquerda = _converterParaDateTime(esquerda);
-    final dataDireita = _converterParaDateTime(direita);
-
-    if (dataEsquerda == null && dataDireita == null) {
-      return 0;
-    }
-    if (dataEsquerda == null) {
-      return 1;
-    }
-    if (dataDireita == null) {
-      return -1;
-    }
-
-    return dataEsquerda.compareTo(dataDireita);
   }
 
   DateTime? _converterParaDateTime(dynamic valor) {
@@ -512,7 +452,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
   }
 
   Future<void> _sair() async {
-    await _autenticacao.signOut();
+    await _authService.signOut();
     if (!mounted) {
       return;
     }

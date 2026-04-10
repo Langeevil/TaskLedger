@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../models/tarefa_model.dart';
+import '../services/tarefa_service.dart';
+import '../utils/app_date_utils.dart';
+
 class TelaTarefas extends StatefulWidget {
   const TelaTarefas({
     super.key,
@@ -18,7 +22,7 @@ class TelaTarefas extends StatefulWidget {
 }
 
 class _TelaTarefasState extends State<TelaTarefas> {
-  final _firestore = FirebaseFirestore.instance;
+  final _tarefaService = TarefaService();
   String _filtroStatus = 'todos';
   String _filtroPrioridade = 'todas';
   bool _processando = false;
@@ -38,39 +42,15 @@ class _TelaTarefasState extends State<TelaTarefas> {
   }
 
   int _compararDatas(dynamic esquerda, dynamic direita) {
-    final dataEsquerda = _converterParaDateTime(esquerda);
-    final dataDireita = _converterParaDateTime(direita);
-
-    if (dataEsquerda == null && dataDireita == null) {
-      return 0;
-    }
-    if (dataEsquerda == null) {
-      return 1;
-    }
-    if (dataDireita == null) {
-      return -1;
-    }
-
-    return dataEsquerda.compareTo(dataDireita);
+    return AppDateUtils.compareNullable(esquerda, direita);
   }
 
   DateTime? _converterParaDateTime(dynamic valor) {
-    if (valor is Timestamp) {
-      return valor.toDate();
-    }
-    if (valor is DateTime) {
-      return valor;
-    }
-    if (valor is String && valor.trim().isNotEmpty) {
-      return DateTime.tryParse(valor);
-    }
-    return null;
+    return AppDateUtils.parse(valor);
   }
 
   String _formatarData(DateTime data) {
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-    return '$dia/$mes/${data.year}';
+    return AppDateUtils.format(data);
   }
 
   String _tituloStatus(String status) {
@@ -113,10 +93,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
     });
 
     try {
-      await _firestore.collection('tarefas').doc(id).update({
-        'status': novoStatus,
-        'atualizadoEm': FieldValue.serverTimestamp(),
-      });
+      await _tarefaService.updateStatus(id: id, status: novoStatus);
       await widget.onDadosAtualizados();
     } finally {
       if (mounted) {
@@ -165,7 +142,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
       return;
     }
 
-    await _firestore.collection('tarefas').doc(id).delete();
+    await _tarefaService.delete(id);
     await widget.onDadosAtualizados();
   }
 
@@ -632,7 +609,7 @@ class _ModalTarefa extends StatefulWidget {
 
 class _ModalTarefaState extends State<_ModalTarefa> {
   final _formKey = GlobalKey<FormState>();
-  final _firestore = FirebaseFirestore.instance;
+  final _tarefaService = TarefaService();
   final _controladorTitulo = TextEditingController();
   final _controladorDescricao = TextEditingController();
 
@@ -704,27 +681,21 @@ class _ModalTarefaState extends State<_ModalTarefa> {
       _salvando = true;
     });
 
-    final dados = <String, dynamic>{
-      'uid': widget.uid,
-      'titulo': _controladorTitulo.text.trim(),
-      'descricao': _controladorDescricao.text.trim(),
-      'status': _status,
-      'prioridade': _prioridade,
-      'prazo': Timestamp.fromDate(_prazo!),
-      'atualizadoEm': FieldValue.serverTimestamp(),
-    };
+    final tarefa = TarefaModel(
+      id: widget.tarefa?['id']?.toString(),
+      uid: widget.uid,
+      titulo: _controladorTitulo.text.trim(),
+      descricao: _controladorDescricao.text.trim(),
+      status: _status,
+      prioridade: _prioridade,
+      prazo: _prazo,
+    );
 
     try {
       if (_editando) {
-        await _firestore
-            .collection('tarefas')
-            .doc(widget.tarefa!['id'])
-            .update(dados);
+        await _tarefaService.update(tarefa);
       } else {
-        await _firestore.collection('tarefas').add({
-          ...dados,
-          'criadoEm': FieldValue.serverTimestamp(),
-        });
+        await _tarefaService.create(tarefa);
       }
 
       await widget.onSalvou();
@@ -760,9 +731,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
   }
 
   String _formatarData(DateTime data) {
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-    return '$dia/$mes/${data.year}';
+    return AppDateUtils.format(data);
   }
 
   @override

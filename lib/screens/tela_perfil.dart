@@ -1,7 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
 
 class TelaPerfil extends StatelessWidget {
   const TelaPerfil({
@@ -259,8 +261,8 @@ class _ModalEditarPerfilState extends State<_ModalEditarPerfil> {
   final _controladorNome = TextEditingController();
   final _controladorEmail = TextEditingController();
   final _controladorTelefone = TextEditingController();
-  final _autenticacao = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final _authService = AuthService();
+  final _userService = UserService();
   final _mascaraTelefone = MaskTextInputFormatter(
     mask: '(##) #####-####',
     filter: {'#': RegExp(r'[0-9]')},
@@ -292,7 +294,7 @@ class _ModalEditarPerfilState extends State<_ModalEditarPerfil> {
       return;
     }
 
-    final usuario = _autenticacao.currentUser;
+    final usuario = _authService.currentUser;
     final uid = widget.dadosUsuario['uid']?.toString();
 
     if (usuario == null || uid == null || uid.isEmpty) {
@@ -316,11 +318,16 @@ class _ModalEditarPerfilState extends State<_ModalEditarPerfil> {
       };
 
       if (email != emailAtual) {
-        await usuario.verifyBeforeUpdateEmail(email);
+        await _authService.verifyBeforeUpdateEmail(email);
         atualizacoes['email'] = email;
       }
 
-      await _firestore.collection('users').doc(uid).update(atualizacoes);
+      await _userService.updateProfile(
+        uid: uid,
+        nome: nome,
+        telefone: telefone,
+        email: email != emailAtual ? email : null,
+      );
 
       if (!mounted) {
         return;
@@ -711,8 +718,8 @@ class _ModalAlterarSenhaState extends State<_ModalAlterarSenha> {
   final _controladorSenhaAtual = TextEditingController();
   final _controladorNovaSenha = TextEditingController();
   final _controladorConfirmarSenha = TextEditingController();
-  final _autenticacao = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final _authService = AuthService();
+  final _userService = UserService();
 
   bool _ocultarSenhaAtual = true;
   bool _ocultarNovaSenha = true;
@@ -733,7 +740,7 @@ class _ModalAlterarSenhaState extends State<_ModalAlterarSenha> {
       return;
     }
 
-    final usuario = _autenticacao.currentUser;
+    final usuario = _authService.currentUser;
     final email = usuario?.email;
     final uid = usuario?.uid;
 
@@ -747,19 +754,16 @@ class _ModalAlterarSenhaState extends State<_ModalAlterarSenha> {
     });
 
     try {
-      final credencial = EmailAuthProvider.credential(
-        email: email,
-        password: _controladorSenhaAtual.text.trim(),
-      );
-
-      await usuario.reauthenticateWithCredential(credencial);
       final novaSenha = _controladorNovaSenha.text.trim();
-
-      await usuario.updatePassword(novaSenha);
-      await _firestore.collection('users').doc(uid).update({
-        'senha': novaSenha,
-        'confirmaSenha': _controladorConfirmarSenha.text.trim(),
-      });
+      await _authService.updatePassword(
+        senhaAtual: _controladorSenhaAtual.text.trim(),
+        novaSenha: novaSenha,
+      );
+      await _userService.updatePasswordSnapshot(
+        uid: uid,
+        senha: novaSenha,
+        confirmaSenha: _controladorConfirmarSenha.text.trim(),
+      );
 
       if (!mounted) {
         return;

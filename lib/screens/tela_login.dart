@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+
+import '../services/auth_service.dart';
 import 'tela_cadastro.dart';
 import 'tela_dashboard.dart';
 
@@ -15,7 +16,7 @@ class _TelaLoginState extends State<TelaLogin> {
   final _chaveFormulario = GlobalKey<FormState>();
   final _controladorEmail = TextEditingController();
   final _controladorSenha = TextEditingController();
-  final _autenticacao = FirebaseAuth.instance;
+  final _authService = AuthService();
 
   bool _ocultarSenha = true;
   bool _carregando = false;
@@ -24,7 +25,6 @@ class _TelaLoginState extends State<TelaLogin> {
   @override
   void initState() {
     super.initState();
-    // Listener para detectar mudanças no campo de senha
     _controladorSenha.addListener(() {
       setState(() {
         _temTextoSenha = _controladorSenha.text.isNotEmpty;
@@ -46,9 +46,9 @@ class _TelaLoginState extends State<TelaLogin> {
       });
 
       try {
-        await _autenticacao.signInWithEmailAndPassword(
+        await _authService.signIn(
           email: _controladorEmail.text.trim(),
-          password: _controladorSenha.text,
+          senha: _controladorSenha.text,
         );
 
         if (mounted) {
@@ -59,31 +59,26 @@ class _TelaLoginState extends State<TelaLogin> {
             ),
           );
 
-          // Navegar para o dashboard
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const TelaDashboard()),
           );
         }
-      } on FirebaseAuthException catch (e) {
+      } catch (e) {
         String mensagemErro = 'Erro ao fazer login';
+        final codigo = e.toString();
 
-        if (e.code == 'user-not-found') {
-          mensagemErro = 'Usuário não encontrado';
-        } else if (e.code == 'wrong-password') {
+        if (codigo.contains('user-not-found')) {
+          mensagemErro = 'UsuÃ¡rio nÃ£o encontrado';
+        } else if (codigo.contains('wrong-password') ||
+            codigo.contains('invalid-credential')) {
           mensagemErro = 'Senha incorreta';
-        } else if (e.code == 'invalid-email') {
-          mensagemErro = 'E-mail inválido';
+        } else if (codigo.contains('invalid-email')) {
+          mensagemErro = 'E-mail invÃ¡lido';
         }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(mensagemErro), backgroundColor: Colors.red),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
           );
         }
       } finally {
@@ -123,8 +118,6 @@ class _TelaLoginState extends State<TelaLogin> {
                     child: Column(
                       children: [
                         const SizedBox(height: 30),
-
-                        // BOTÃO VOLTAR
                         Align(
                           alignment: Alignment.centerLeft,
                           child: GestureDetector(
@@ -147,10 +140,7 @@ class _TelaLoginState extends State<TelaLogin> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 30),
-
-                        // TÍTULO
                         const Text(
                           'Bem-vindo',
                           style: TextStyle(
@@ -160,10 +150,7 @@ class _TelaLoginState extends State<TelaLogin> {
                             letterSpacing: 0.5,
                           ),
                         ),
-
                         const SizedBox(height: 10),
-
-                        // SUBTÍTULO
                         Text(
                           'Entre na sua conta TaskLedger',
                           style: TextStyle(
@@ -172,15 +159,11 @@ class _TelaLoginState extends State<TelaLogin> {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-
                         const SizedBox(height: 60),
-
-                        // FORMULÁRIO
                         Form(
                           key: _chaveFormulario,
                           child: Column(
                             children: [
-                              // CAMPO EMAIL
                               _construirCampoTexto(
                                 controlador: _controladorEmail,
                                 label: 'E-mail',
@@ -194,15 +177,12 @@ class _TelaLoginState extends State<TelaLogin> {
                                     return 'Digite seu e-mail';
                                   }
                                   if (!value.contains('@')) {
-                                    return 'E-mail inválido';
+                                    return 'E-mail invÃ¡lido';
                                   }
                                   return null;
                                 },
                               ),
-
                               const SizedBox(height: 30),
-
-                              // CAMPO SENHA
                               _construirCampoTexto(
                                 controlador: _controladorSenha,
                                 label: 'Senha',
@@ -239,10 +219,7 @@ class _TelaLoginState extends State<TelaLogin> {
                                   return null;
                                 },
                               ),
-
                               const SizedBox(height: 50),
-
-                              // BOTÃO ENTRAR
                               SizedBox(
                                 width: double.infinity,
                                 height: 56,
@@ -298,15 +275,12 @@ class _TelaLoginState extends State<TelaLogin> {
                                   ),
                                 ),
                               ),
-
                               const SizedBox(height: 30),
-
-                              // LINK CADASTRO
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    'Não tem conta? ',
+                                    'NÃ£o tem conta? ',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 14,
@@ -333,7 +307,6 @@ class _TelaLoginState extends State<TelaLogin> {
                                   ),
                                 ],
                               ),
-
                               const SizedBox(height: 60),
                             ],
                           ),
