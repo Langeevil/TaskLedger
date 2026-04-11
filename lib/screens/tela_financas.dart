@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/transacao_model.dart';
 import '../services/transacao_service.dart';
@@ -74,6 +78,121 @@ class _TelaFinancasState extends State<TelaFinancas> {
 
   String _formatarData(DateTime data) {
     return AppDateUtils.format(data);
+  }
+
+  Uint8List? _decodificarComprovante(String? comprovanteBase64) {
+    if (comprovanteBase64 == null || comprovanteBase64.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      return base64Decode(comprovanteBase64);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _visualizarComprovante(String? comprovanteBase64) {
+    final imagem = _decodificarComprovante(comprovanteBase64);
+    if (imagem == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel abrir o comprovante.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: const Color(0xFF0F1729),
+          insetPadding: const EdgeInsets.all(20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Comprovante',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _baixarComprovante(imagem),
+                      icon: const Icon(Icons.download_outlined, size: 18),
+                      label: const Text('Baixar'),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: InteractiveViewer(
+                      minScale: 0.8,
+                      maxScale: 4,
+                      child: Image.memory(imagem, fit: BoxFit.contain),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _baixarComprovante(Uint8List imagem) async {
+    try {
+      await FileSaver.instance.saveFile(
+        name: 'comprovante_taskledger_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: imagem,
+        fileExtension: 'jpg',
+        mimeType: MimeType.jpeg,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Comprovante baixado com sucesso.'),
+          backgroundColor: Color(0xFF6366F1),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel baixar o comprovante.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _abrirModalLancamento({Map<String, dynamic>? transacao}) async {
@@ -398,6 +517,9 @@ class _TelaFinancasState extends State<TelaFinancas> {
     final data = _converterParaDateTime(transacao['data']);
     final categoria = transacao['categoria']?.toString() ?? 'Sem categoria';
     final observacao = transacao['observacao']?.toString() ?? '';
+    final comprovanteBase64 = transacao['comprovanteBase64']?.toString();
+    final temComprovante =
+        comprovanteBase64 != null && comprovanteBase64.trim().isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -447,6 +569,44 @@ class _TelaFinancasState extends State<TelaFinancas> {
                     style: TextStyle(color: Colors.white.withOpacity(0.55)),
                   ),
                 ],
+                if (temComprovante) ...[
+                  const SizedBox(height: 8),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => _visualizarComprovante(comprovanteBase64),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.receipt_long,
+                              size: 14,
+                              color: Color(0xFF93C5FD),
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Ver comprovante',
+                              style: TextStyle(
+                                color: Color(0xFFBFDBFE),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -480,15 +640,15 @@ class _TelaFinancasState extends State<TelaFinancas> {
                     _confirmarExclusao(transacao);
                   }
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
                     value: 'editar',
                     child: Text(
                       'Editar',
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: 'excluir',
                     child: Text(
                       'Excluir',
@@ -569,6 +729,7 @@ class _ModalLancamento extends StatefulWidget {
 class _ModalLancamentoState extends State<_ModalLancamento> {
   final _formKey = GlobalKey<FormState>();
   final _transacaoService = TransacaoService();
+  final _imagePicker = ImagePicker();
   final _controladorTitulo = TextEditingController();
   final _controladorValor = TextEditingController();
   final _controladorObservacao = TextEditingController();
@@ -586,6 +747,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
 
   String _tipo = 'despesa';
   String _categoria = 'Outros';
+  String? _comprovanteBase64;
   DateTime? _data;
   bool _salvando = false;
   bool _salvo = false;
@@ -600,6 +762,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
         widget.transacao?['observacao']?.toString() ?? '';
     _tipo = widget.transacao?['tipo']?.toString() ?? 'despesa';
     _categoria = widget.transacao?['categoria']?.toString() ?? 'Outros';
+    _comprovanteBase64 = widget.transacao?['comprovanteBase64']?.toString();
     _controladorValor.text = _formatarValorInicial(widget.transacao?['valor']);
 
     final data = widget.transacao?['data'];
@@ -641,6 +804,151 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
 
   String _formatarNumeroReal(double valor) {
     return _CurrencyBrInputFormatter.formatar(valor);
+  }
+
+  Uint8List? _decodificarComprovante() {
+    if (_comprovanteBase64 == null || _comprovanteBase64!.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      return base64Decode(_comprovanteBase64!);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _selecionarComprovante() async {
+    try {
+      final imagem = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 72,
+        maxWidth: 1280,
+      );
+
+      if (imagem == null) {
+        return;
+      }
+
+      final bytes = await imagem.readAsBytes();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _comprovanteBase64 = base64Encode(bytes);
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _mostrarMensagem('Nao foi possivel selecionar a imagem.');
+    }
+  }
+
+  void _removerComprovante() {
+    setState(() {
+      _comprovanteBase64 = null;
+    });
+  }
+
+  void _visualizarComprovante() {
+    final imagem = _decodificarComprovante();
+    if (imagem == null) {
+      _mostrarMensagem('Nao foi possivel abrir o comprovante.');
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: const Color(0xFF0F1729),
+          insetPadding: const EdgeInsets.all(20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Comprovante',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _baixarComprovante(imagem),
+                      icon: const Icon(Icons.download_outlined, size: 18),
+                      label: const Text('Baixar'),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: InteractiveViewer(
+                      minScale: 0.8,
+                      maxScale: 4,
+                      child: Image.memory(imagem, fit: BoxFit.contain),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _baixarComprovante(Uint8List imagem) async {
+    try {
+      await FileSaver.instance.saveFile(
+        name: 'comprovante_taskledger_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: imagem,
+        fileExtension: 'jpg',
+        mimeType: MimeType.jpeg,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Comprovante baixado com sucesso.'),
+          backgroundColor: Color(0xFF6366F1),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel baixar o comprovante.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _selecionarData() async {
@@ -689,6 +997,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
       valor: _parseValor(),
       data: _data,
       observacao: _controladorObservacao.text.trim(),
+      comprovanteBase64: _comprovanteBase64,
     );
 
     try {
@@ -886,6 +1195,8 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
               textInputAction: TextInputAction.newline,
               validador: (_) => null,
             ),
+            const SizedBox(height: 16),
+            _construirCampoComprovante(),
             const SizedBox(height: 28),
             SizedBox(
               width: double.infinity,
@@ -1013,6 +1324,100 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
           )
           .toList(),
       onChanged: onChanged,
+    );
+  }
+
+  Widget _construirCampoComprovante() {
+    final imagem = _decodificarComprovante();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F3A).withOpacity(0.75),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                color: Colors.white.withOpacity(0.72),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Comprovante',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _selecionarComprovante,
+                icon: const Icon(Icons.image_outlined, size: 18),
+                label: Text(imagem == null ? 'Adicionar' : 'Trocar'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Anexe uma foto do comprovante para ter mais controle sobre suas despesas e receitas.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.58),
+              height: 1.35,
+            ),
+          ),
+          if (imagem != null) ...[
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.memory(
+                  imagem,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _visualizarComprovante,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: const Color(0xFF6366F1).withOpacity(0.45),
+                      ),
+                    ),
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('Visualizar'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _removerComprovante,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFFFA8A8),
+                      side: BorderSide(color: Colors.red.withOpacity(0.45)),
+                    ),
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Remover'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

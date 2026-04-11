@@ -13,7 +13,9 @@ class TransacaoService {
       _firestore.collection('transacoes');
 
   Future<List<TransacaoModel>> listByUser(String uid) async {
-    final query = await _transactionsCollection.where('uid', isEqualTo: uid).get();
+    final query = await _transactionsCollection
+        .where('uid', isEqualTo: uid)
+        .get();
 
     final transactions = query.docs
         .map((doc) => TransacaoModel.fromMap(doc.data(), id: doc.id))
@@ -34,6 +36,7 @@ class TransacaoService {
           ? Timestamp.fromDate(transaction.data!)
           : null,
       'observacao': transaction.observacao,
+      'comprovanteBase64': transaction.comprovanteBase64,
       'atualizadoEm': FieldValue.serverTimestamp(),
       'criadoEm': FieldValue.serverTimestamp(),
     });
@@ -50,6 +53,7 @@ class TransacaoService {
           ? Timestamp.fromDate(transaction.data!)
           : null,
       'observacao': transaction.observacao,
+      'comprovanteBase64': transaction.comprovanteBase64,
       'atualizadoEm': FieldValue.serverTimestamp(),
     });
   }

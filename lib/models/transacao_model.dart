@@ -1,4 +1,5 @@
 import '../utils/app_date_utils.dart';
+import '../utils/app_currency_utils.dart';
 
 class TransacaoModel {
   const TransacaoModel({
@@ -10,6 +11,7 @@ class TransacaoModel {
     required this.valor,
     required this.data,
     required this.observacao,
+    this.comprovanteBase64,
     this.criadoEm,
     this.atualizadoEm,
   });
@@ -22,6 +24,7 @@ class TransacaoModel {
   final double valor;
   final DateTime? data;
   final String observacao;
+  final String? comprovanteBase64;
   final DateTime? criadoEm;
   final DateTime? atualizadoEm;
 
@@ -34,9 +37,10 @@ class TransacaoModel {
       titulo: map['titulo']?.toString() ?? '',
       tipo: map['tipo']?.toString() ?? 'despesa',
       categoria: map['categoria']?.toString() ?? 'Outros',
-      valor: rawValue is num ? rawValue.toDouble() : 0,
+      valor: AppCurrencyUtils.parse(rawValue),
       data: AppDateUtils.parse(map['data']),
       observacao: map['observacao']?.toString() ?? '',
+      comprovanteBase64: map['comprovanteBase64']?.toString(),
       criadoEm: AppDateUtils.parse(map['criadoEm']),
       atualizadoEm: AppDateUtils.parse(map['atualizadoEm']),
     );
@@ -52,6 +56,7 @@ class TransacaoModel {
       'valor': valor,
       'data': data,
       'observacao': observacao,
+      'comprovanteBase64': comprovanteBase64,
       'criadoEm': criadoEm,
       'atualizadoEm': atualizadoEm,
     };
