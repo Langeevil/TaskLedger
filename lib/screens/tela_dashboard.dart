@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/dashboard_service.dart';
+import '../services/user_service.dart';
 
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
+import 'tela_planejamento.dart';
 import 'tela_tarefas.dart';
 
 class TelaDashboard extends StatefulWidget {
@@ -18,6 +20,7 @@ class TelaDashboard extends StatefulWidget {
 class _TelaDashboardState extends State<TelaDashboard> {
   final _authService = AuthService();
   final _dashboardService = DashboardService();
+  final _userService = UserService();
 
   int _indiceTelaAtual = 0;
   late User _usuarioAtual;
@@ -63,6 +66,9 @@ class _TelaDashboardState extends State<TelaDashboard> {
       setState(() {
         _mensagemErro = null;
         _dadosUsuario = _normalizarDadosUsuario(dadosUsuario);
+        _notificacoesVisualizadas
+          ..clear()
+          ..addAll(_extrairNotificacoesVisualizadas(dadosUsuario));
         _tarefas = tarefas;
         _transacoes = transacoes;
         _totalTarefas = dashboardData.totalTarefas;
@@ -113,6 +119,15 @@ class _TelaDashboardState extends State<TelaDashboard> {
       'nome': nome,
       'telefone': telefone,
     };
+  }
+
+  List<String> _extrairNotificacoesVisualizadas(Map<String, dynamic> dados) {
+    final visualizadas = dados['notificacoesVisualizadas'];
+    if (visualizadas is! List) {
+      return <String>[];
+    }
+
+    return visualizadas.map((item) => item.toString()).toList();
   }
 
   String _gerarNomeFallback(String email) {
@@ -326,12 +341,12 @@ class _TelaDashboardState extends State<TelaDashboard> {
 
   void _abrirCentralNotificacoes() {
     final notificacoes = _obterNotificacoes();
+    final idsVisualizados = notificacoes.map(_identificadorNotificacao);
 
     setState(() {
-      _notificacoesVisualizadas.addAll(
-        notificacoes.map(_identificadorNotificacao),
-      );
+      _notificacoesVisualizadas.addAll(idsVisualizados);
     });
+    _salvarNotificacoesVisualizadas();
 
     showModalBottomSheet<void>(
       context: context,
@@ -442,6 +457,17 @@ class _TelaDashboardState extends State<TelaDashboard> {
     );
   }
 
+  Future<void> _salvarNotificacoesVisualizadas() async {
+    try {
+      await _userService.updateViewedNotifications(
+        uid: _usuarioAtual.uid,
+        notificacoesVisualizadas: _notificacoesVisualizadas.toList(),
+      );
+    } catch (_) {
+      // A notificacao continua marcada na sessao atual mesmo se a persistencia falhar.
+    }
+  }
+
   void _atualizarDadosPerfil(Map<String, dynamic> novosDados) {
     setState(() {
       _dadosUsuario = _normalizarDadosUsuario({
@@ -479,6 +505,8 @@ class _TelaDashboardState extends State<TelaDashboard> {
           onDadosAtualizados: _carregarDados,
         );
       case 3:
+        return TelaPlanejamento(uid: _usuarioAtual.uid);
+      case 4:
         return TelaPerfil(
           dadosUsuario: _dadosUsuario,
           onPerfilAtualizado: _atualizarDadosPerfil,
@@ -810,7 +838,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                   ),
                 ),
               ),
-              if (acao != null) acao,
+              ?acao,
             ],
           ),
           const SizedBox(height: 18),
@@ -1185,6 +1213,11 @@ class _TelaDashboardState extends State<TelaDashboard> {
               ),
               _construirItemDrawer(
                 indice: 3,
+                titulo: 'Planejamento',
+                icone: Icons.event_note_outlined,
+              ),
+              _construirItemDrawer(
+                indice: 4,
                 titulo: 'Perfil',
                 icone: Icons.person_outline,
               ),

@@ -4,6 +4,7 @@ class UsuarioModel {
     required this.nome,
     required this.email,
     required this.telefone,
+    this.notificacoesVisualizadas = const <String>[],
     this.dataCriacao,
   });
 
@@ -11,6 +12,7 @@ class UsuarioModel {
   final String nome;
   final String email;
   final String telefone;
+  final List<String> notificacoesVisualizadas;
   final DateTime? dataCriacao;
 
   factory UsuarioModel.fromMap(
@@ -27,12 +29,18 @@ class UsuarioModel {
     final telefone = map['telefone']?.toString().trim().isNotEmpty == true
         ? map['telefone'].toString().trim()
         : 'Nao informado';
+    final notificacoesVisualizadas = map['notificacoesVisualizadas'] is List
+        ? (map['notificacoesVisualizadas'] as List)
+              .map((item) => item.toString())
+              .toList()
+        : <String>[];
 
     return UsuarioModel(
       uid: map['uid']?.toString() ?? fallbackUid ?? '',
       nome: nome,
       email: email,
       telefone: telefone,
+      notificacoesVisualizadas: notificacoesVisualizadas,
       dataCriacao: map['dataCriacao'] is DateTime
           ? map['dataCriacao'] as DateTime
           : null,
@@ -45,6 +53,7 @@ class UsuarioModel {
       'nome': nome,
       'email': email,
       'telefone': telefone,
+      'notificacoesVisualizadas': notificacoesVisualizadas,
       'dataCriacao': dataCriacao,
     };
   }
@@ -54,6 +63,7 @@ class UsuarioModel {
     String? nome,
     String? email,
     String? telefone,
+    List<String>? notificacoesVisualizadas,
     DateTime? dataCriacao,
   }) {
     return UsuarioModel(
@@ -61,6 +71,8 @@ class UsuarioModel {
       nome: nome ?? this.nome,
       email: email ?? this.email,
       telefone: telefone ?? this.telefone,
+      notificacoesVisualizadas:
+          notificacoesVisualizadas ?? this.notificacoesVisualizadas,
       dataCriacao: dataCriacao ?? this.dataCriacao,
     );
   }

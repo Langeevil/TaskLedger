@@ -65,4 +65,13 @@ class UserService {
       'confirmaSenha': confirmaSenha,
     });
   }
+
+  Future<void> updateViewedNotifications({
+    required String uid,
+    required List<String> notificacoesVisualizadas,
+  }) {
+    return _usersCollection.doc(uid).update({
+      'notificacoesVisualizadas': notificacoesVisualizadas,
+    });
+  }
 }
