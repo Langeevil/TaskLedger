@@ -8,6 +8,7 @@ import '../services/user_service.dart';
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
 import 'tela_planejamento.dart';
+import 'tela_relatorios.dart';
 import 'tela_tarefas.dart';
 
 class TelaDashboard extends StatefulWidget {
@@ -48,7 +49,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
     try {
       final dashboardData = await _dashboardService.carregarDados(
         uid: _usuarioAtual.uid,
-        email: _usuarioAtual.email ?? 'Nao informado',
+        email: _usuarioAtual.email ?? 'Não informado',
       );
 
       final dadosUsuario = dashboardData.usuario.toMap();
@@ -85,7 +86,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
       setState(() {
         _dadosUsuario = _normalizarDadosUsuario({
           'uid': _usuarioAtual.uid,
-          'email': _usuarioAtual.email ?? 'Nao informado',
+          'email': _usuarioAtual.email ?? 'Não informado',
         });
         _tarefas = [];
         _transacoes = [];
@@ -94,7 +95,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
         _totalGastos = 0;
         _saldo = 0;
         _carregando = false;
-        _mensagemErro = 'Nao foi possivel carregar seus dados agora.';
+        _mensagemErro = 'Não foi possível carregar seus dados agora.';
       });
     }
   }
@@ -102,7 +103,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
   Map<String, dynamic> _normalizarDadosUsuario(Map<String, dynamic> dados) {
     final email = dados['email']?.toString().trim().isNotEmpty == true
         ? dados['email'].toString().trim()
-        : (_usuarioAtual.email ?? 'Nao informado');
+        : (_usuarioAtual.email ?? 'Não informado');
 
     final nome = dados['nome']?.toString().trim().isNotEmpty == true
         ? dados['nome'].toString().trim()
@@ -110,7 +111,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
 
     final telefone = dados['telefone']?.toString().trim().isNotEmpty == true
         ? dados['telefone'].toString().trim()
-        : 'Nao informado';
+        : 'Não informado';
 
     return {
       ...dados,
@@ -133,7 +134,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
   String _gerarNomeFallback(String email) {
     final parteLocal = email.split('@').first.trim();
     if (parteLocal.isEmpty) {
-      return 'Usuario';
+      return 'Usuário';
     }
 
     final nome = parteLocal.replaceAll('.', ' ');
@@ -142,7 +143,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
 
   String _obterPrimeiroNome(String? nomeCompleto) {
     if (nomeCompleto == null || nomeCompleto.trim().isEmpty) {
-      return 'Usuario';
+      return 'Usuário';
     }
 
     return nomeCompleto.trim().split(RegExp(r'\s+')).first;
@@ -283,7 +284,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
     for (final transacao in transacoesRecentes) {
       final tipo = transacao['tipo']?.toString() ?? 'despesa';
       final valor = _converterParaDouble(transacao['valor']);
-      final titulo = transacao['titulo']?.toString() ?? 'Lancamento';
+      final titulo = transacao['titulo']?.toString() ?? 'Lançamento';
       final data = _converterParaDateTime(transacao['data']);
 
       if (tipo == 'despesa' && valor >= 300) {
@@ -380,7 +381,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                     children: [
                       const Expanded(
                         child: Text(
-                          'Notificacoes',
+                          'Notificações',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -413,7 +414,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                                 ),
                                 const SizedBox(height: 16),
                                 const Text(
-                                  'Nenhuma notificacao no momento',
+                                  'Nenhuma notificação no momento',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -464,7 +465,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
         notificacoesVisualizadas: _notificacoesVisualizadas.toList(),
       );
     } catch (_) {
-      // A notificacao continua marcada na sessao atual mesmo se a persistencia falhar.
+      // A notificação continua marcada na sessão atual mesmo se a persistência falhar.
     }
   }
 
@@ -507,6 +508,12 @@ class _TelaDashboardState extends State<TelaDashboard> {
       case 3:
         return TelaPlanejamento(uid: _usuarioAtual.uid);
       case 4:
+        return TelaRelatorios(
+          uid: _usuarioAtual.uid,
+          tarefas: _tarefas,
+          transacoes: _transacoes,
+        );
+      case 5:
         return TelaPerfil(
           dadosUsuario: _dadosUsuario,
           onPerfilAtualizado: _atualizarDadosPerfil,
@@ -614,7 +621,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
               ),
               const SizedBox(height: 32),
               _construirSecao(
-                titulo: 'Proximas tarefas',
+                titulo: 'Próximas tarefas',
                 acao: TextButton(
                   onPressed: () {
                     setState(() {
@@ -626,7 +633,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                 child: tarefasPendentes.isEmpty
                     ? _construirEstadoVazio(
                         icone: Icons.task_alt,
-                        texto: 'Voce ainda nao criou tarefas.',
+                        texto: 'Você ainda não criou tarefas.',
                       )
                     : Column(
                         children: tarefasPendentes.map((tarefa) {
@@ -714,7 +721,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                 child: transacoesRecentes.isEmpty
                     ? _construirEstadoVazio(
                         icone: Icons.receipt_long,
-                        texto: 'Voce ainda nao registrou lancamentos.',
+                        texto: 'Você ainda não registrou lançamentos.',
                       )
                     : Column(
                         children: transacoesRecentes.map((transacao) {
@@ -765,7 +772,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                                       children: [
                                         Text(
                                           transacao['titulo']?.toString() ??
-                                              'Lancamento',
+                                              'Lançamento',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w700,
@@ -953,7 +960,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    notificacao['titulo']?.toString() ?? 'Notificacao',
+                    notificacao['titulo']?.toString() ?? 'Notificação',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1208,7 +1215,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
               ),
               _construirItemDrawer(
                 indice: 2,
-                titulo: 'Financas',
+                titulo: 'Finanças',
                 icone: Icons.attach_money,
               ),
               _construirItemDrawer(
@@ -1218,6 +1225,11 @@ class _TelaDashboardState extends State<TelaDashboard> {
               ),
               _construirItemDrawer(
                 indice: 4,
+                titulo: 'Relatórios',
+                icone: Icons.bar_chart_outlined,
+              ),
+              _construirItemDrawer(
+                indice: 5,
                 titulo: 'Perfil',
                 icone: Icons.person_outline,
               ),

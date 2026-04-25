@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -80,6 +81,232 @@ class _TelaFinancasState extends State<TelaFinancas> {
     return AppDateUtils.format(data);
   }
 
+  List<_CategoriaDespesaItem> _despesasPorCategoria(
+    List<Map<String, dynamic>> transacoes,
+  ) {
+    final totais = <String, double>{};
+
+    for (final transacao in transacoes) {
+      final tipo = transacao['tipo']?.toString() ?? 'despesa';
+      if (tipo != 'despesa') {
+        continue;
+      }
+
+      final categoria = transacao['categoria']?.toString().trim();
+      final chave = categoria == null || categoria.isEmpty
+          ? 'Outros'
+          : categoria;
+      totais[chave] =
+          (totais[chave] ?? 0) + _converterParaDouble(transacao['valor']);
+    }
+
+    final cores = <Color>[
+      const Color(0xFF6366F1),
+      const Color(0xFFF97316),
+      const Color(0xFF10B981),
+      const Color(0xFF38BDF8),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEF4444),
+    ];
+
+    final itens =
+        totais.entries
+            .map(
+              (entry) => _CategoriaDespesaItem(
+                categoria: entry.key,
+                total: entry.value,
+                cor:
+                    cores[totais.keys.toList().indexOf(entry.key) %
+                        cores.length],
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.total.compareTo(a.total));
+
+    return itens;
+  }
+
+  Widget _construirGraficoDespesasPorCategoria(
+    List<Map<String, dynamic>> transacoes,
+  ) {
+    final categorias = _despesasPorCategoria(transacoes);
+    final totalDespesas = categorias.fold<double>(
+      0,
+      (total, item) => total + item.total,
+    );
+
+    if (categorias.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF11182E).withOpacity(0.82),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.18)),
+        ),
+        child: Text(
+          'Ainda não há despesas suficientes nesse recorte para montar a distribuição por categoria.',
+          style: TextStyle(color: Colors.white.withOpacity(0.72), height: 1.45),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF11182E).withOpacity(0.82),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Distribuição de despesas',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Mostra quais categorias estão consumindo mais do seu caixa no periodo filtrado.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.68),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 230,
+            child: Row(
+              children: [
+                Expanded(
+                  child: PieChart(
+                    PieChartData(
+                      centerSpaceRadius: 58,
+                      sectionsSpace: 3,
+                      sections: categorias.map((item) {
+                        final percentual = totalDespesas == 0
+                            ? 0
+                            : (item.total / totalDespesas) * 100;
+                        return PieChartSectionData(
+                          color: item.cor,
+                          value: item.total,
+                          radius: 52,
+                          title: percentual >= 8
+                              ? '${percentual.toStringAsFixed(0)}%'
+                              : '',
+                          titleStyle: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total em despesas',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.62),
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _formatarMoeda(totalDespesas),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: categorias
+                                .map(
+                                  (item) => _construirLegendaCategoria(
+                                    item: item,
+                                    totalGeral: totalDespesas,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirLegendaCategoria({
+    required _CategoriaDespesaItem item,
+    required double totalGeral,
+  }) {
+    final percentual = totalGeral == 0 ? 0 : (item.total / totalGeral) * 100;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: item.cor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              item.categoria,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.84),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatarMoeda(item.total),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '${percentual.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Uint8List? _decodificarComprovante(String? comprovanteBase64) {
     if (comprovanteBase64 == null || comprovanteBase64.trim().isEmpty) {
       return null;
@@ -97,7 +324,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
     if (imagem == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel abrir o comprovante.'),
+          content: Text('Não foi possível abrir o comprovante.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -188,7 +415,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel baixar o comprovante.'),
+          content: Text('Não foi possível baixar o comprovante.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -222,7 +449,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
         return AlertDialog(
           backgroundColor: const Color(0xFF11182E),
           title: const Text(
-            'Excluir lancamento',
+            'Excluir lançamento',
             style: TextStyle(color: Colors.white),
           ),
           content: const Text(
@@ -267,7 +494,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
               children: [
                 const Expanded(
                   child: Text(
-                    'Financas',
+                    'Finanças',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -310,7 +537,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Resumo do mes atual',
+                    'Resumo do mês atual',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -401,7 +628,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
               child: Row(
                 children: [
                   _construirChipFiltro(
-                    label: 'Mes atual',
+                    label: 'Mês atual',
                     ativo: _filtroPeriodo == 'mes',
                     onTap: () => setState(() => _filtroPeriodo = 'mes'),
                   ),
@@ -421,8 +648,10 @@ class _TelaFinancasState extends State<TelaFinancas> {
               ),
             ),
             const SizedBox(height: 24),
+            _construirGraficoDespesasPorCategoria(transacoesFiltradas),
+            const SizedBox(height: 24),
             const Text(
-              'Lancamentos',
+              'Lançamentos',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -550,7 +779,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transacao['titulo']?.toString() ?? 'Lancamento',
+                  transacao['titulo']?.toString() ?? 'Lançamento',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -682,7 +911,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Nenhum lancamento encontrado',
+            'Nenhum lançamento encontrado',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -691,7 +920,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Registre uma receita ou despesa para comecar a acompanhar sua vida financeira.',
+            'Registre uma receita ou despesa para começar a acompanhar sua vida financeira.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white.withOpacity(0.6), height: 1.4),
           ),
@@ -703,7 +932,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
               foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.add),
-            label: const Text('Novo lancamento'),
+            label: const Text('Novo lançamento'),
           ),
         ],
       ),
@@ -843,7 +1072,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
       if (!mounted) {
         return;
       }
-      _mostrarMensagem('Nao foi possivel selecionar a imagem.');
+      _mostrarMensagem('Não foi possível selecionar a imagem.');
     }
   }
 
@@ -856,7 +1085,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
   void _visualizarComprovante() {
     final imagem = _decodificarComprovante();
     if (imagem == null) {
-      _mostrarMensagem('Nao foi possivel abrir o comprovante.');
+      _mostrarMensagem('Não foi possível abrir o comprovante.');
       return;
     }
 
@@ -944,7 +1173,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel baixar o comprovante.'),
+          content: Text('Não foi possível baixar o comprovante.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1029,7 +1258,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
       setState(() {
         _salvando = false;
       });
-      _mostrarMensagem('Nao foi possivel salvar o lancamento.');
+      _mostrarMensagem('Não foi possível salvar o lançamento.');
     }
   }
 
@@ -1094,7 +1323,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
             ),
             const SizedBox(height: 20),
             Text(
-              _editando ? 'Editar lancamento' : 'Novo lancamento',
+              _editando ? 'Editar lançamento' : 'Novo lançamento',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -1149,7 +1378,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
                   return 'Digite um valor';
                 }
                 if (_parseValor() <= 0) {
-                  return 'Digite um valor valido';
+                  return 'Digite um valor válido';
                 }
                 return null;
               },
@@ -1189,7 +1418,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
             const SizedBox(height: 16),
             _construirCampoTexto(
               controlador: _controladorObservacao,
-              label: 'Observacao',
+              label: 'Observação',
               teclado: TextInputType.multiline,
               maxLines: 4,
               textInputAction: TextInputAction.newline,
@@ -1231,8 +1460,8 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
                         )
                       : Text(
                           _editando
-                              ? 'Salvar alteracoes'
-                              : 'Adicionar lancamento',
+                              ? 'Salvar alterações'
+                              : 'Adicionar lançamento',
                         ),
                 ),
               ),
@@ -1453,7 +1682,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
             ),
             const SizedBox(height: 24),
             Text(
-              _editando ? 'Lancamento atualizado' : 'Lancamento registrado',
+              _editando ? 'Lançamento atualizado' : 'Lançamento registrado',
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -1511,4 +1740,16 @@ class _CurrencyBrInputFormatter extends TextInputFormatter {
 
     return '${buffer.toString()},$decimal';
   }
+}
+
+class _CategoriaDespesaItem {
+  const _CategoriaDespesaItem({
+    required this.categoria,
+    required this.total,
+    required this.cor,
+  });
+
+  final String categoria;
+  final double total;
+  final Color cor;
 }

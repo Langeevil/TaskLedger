@@ -327,7 +327,7 @@ class _TelaCadastroState extends State<TelaCadastro> {
                                     return 'Digite sua senha';
                                   }
                                   if (!_senhaAtendeRequisitos(value)) {
-                                    return 'Sua senha nao atende aos requisitos';
+                                    return 'Sua senha não atende aos requisitos';
                                   }
                                   return null;
                                 },

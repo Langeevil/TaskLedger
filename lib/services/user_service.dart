@@ -20,9 +20,9 @@ class UserService {
     if (!document.exists) {
       final user = UsuarioModel(
         uid: uid,
-        nome: 'Usuario',
+        nome: 'Usuário',
         email: email,
-        telefone: 'Nao informado',
+        telefone: 'Não informado',
         dataCriacao: DateTime.now(),
       );
 

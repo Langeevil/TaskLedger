@@ -63,7 +63,7 @@ Future<void> _baixarImagemBytes(BuildContext context, Uint8List imagem) async {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Nao foi possivel baixar a imagem.'),
+        content: Text('Não foi possível baixar a imagem.'),
         backgroundColor: Colors.red,
       ),
     );
@@ -86,7 +86,7 @@ Future<void> _baixarImagemUrl(BuildContext context, String url) async {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Nao foi possivel baixar a imagem.'),
+        content: Text('Não foi possível baixar a imagem.'),
         backgroundColor: Colors.red,
       ),
     );
@@ -144,7 +144,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
       if (!mounted) return;
       setState(() {
         _carregando = false;
-        _erro = 'Nao foi possivel carregar: $e';
+        _erro = 'Não foi possível carregar: $e';
       });
     }
   }
@@ -158,7 +158,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
       case 'em_andamento':
         return 'Em andamento';
       case 'concluido':
-        return 'Concluido';
+        return 'Concluído';
       default:
         return 'Planejado';
     }
@@ -191,7 +191,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
   void _visualizarImagem(String? base64) {
     final imagem = _decodificarImagem(base64);
     if (imagem == null) {
-      _mensagem('Nao foi possivel abrir a imagem.');
+      _mensagem('Não foi possível abrir a imagem.');
       return;
     }
 
@@ -272,7 +272,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
       await _service.updateStatus(id: id, status: novo);
       await _carregar();
     } catch (e) {
-      _mensagem('Nao foi possivel atualizar o status: $e');
+      _mensagem('Não foi possível atualizar o status: $e');
     } finally {
       if (mounted) setState(() => _processando = false);
     }
@@ -314,7 +314,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
       await _service.delete(id);
       await _carregar();
     } catch (e) {
-      _mensagem('Nao foi possivel excluir: $e');
+      _mensagem('Não foi possível excluir: $e');
     }
   }
 
@@ -430,7 +430,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _resumo(
-                    'Concluidos',
+                    'Concluídos',
                     _contar('concluido').toString(),
                     const Color(0xFF10B981),
                   ),
@@ -518,7 +518,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
           ),
           _espaco(),
           _chip(
-            'Concluidos',
+            'Concluídos',
             _status == 'concluido',
             () => setState(() => _status = 'concluido'),
           ),
@@ -545,7 +545,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
           ),
           _espaco(),
           _chip(
-            'Media',
+            'Média',
             _prioridade == 'media',
             () => setState(() => _prioridade = 'media'),
           ),
@@ -861,7 +861,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
         _imagemUrl = null;
       });
     } catch (_) {
-      _mensagem('Nao foi possivel selecionar a imagem.');
+      _mensagem('Não foi possível selecionar a imagem.');
     }
   }
 
@@ -872,7 +872,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
       return;
     }
     if (imagem == null) {
-      _mensagem('Nao foi possivel abrir a imagem.');
+      _mensagem('Não foi possível abrir a imagem.');
       return;
     }
 
@@ -1006,7 +1006,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _salvando = false);
-      _mensagem('Nao foi possivel salvar o planejamento: $e');
+      _mensagem('Não foi possível salvar o planejamento: $e');
     }
   }
 
@@ -1099,7 +1099,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
             const SizedBox(height: 16),
             _campoTexto(
               _descricao,
-              'Descricao',
+              'Descrição',
               4,
               (_) => null,
               TextInputAction.newline,
@@ -1110,7 +1110,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
             _dropdown(
               'Prioridade',
               _prioridade,
-              const {'alta': 'Alta', 'media': 'Media', 'baixa': 'Baixa'},
+              const {'alta': 'Alta', 'media': 'Média', 'baixa': 'Baixa'},
               (valor) {
                 setState(() => _prioridade = valor!);
               },
@@ -1122,7 +1122,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
               const {
                 'a_fazer': 'Planejado',
                 'em_andamento': 'Em andamento',
-                'concluido': 'Concluido',
+                'concluido': 'Concluído',
               },
               (valor) {
                 setState(() => _status = valor!);
@@ -1380,7 +1380,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : Text(_editando ? 'Salvar alteracoes' : 'Criar planejamento'),
+              : Text(_editando ? 'Salvar alterações' : 'Criar planejamento'),
         ),
       ),
     );
@@ -1427,7 +1427,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
             ),
             const SizedBox(height: 8),
             Text(
-              'As informacoes foram salvas no JSONBin.',
+              'As informações foram salvas no JSONBin.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
             ),

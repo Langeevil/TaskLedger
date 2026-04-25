@@ -22,13 +22,13 @@ class UsuarioModel {
   }) {
     final email = map['email']?.toString().trim().isNotEmpty == true
         ? map['email'].toString().trim()
-        : (fallbackEmail ?? 'Nao informado');
+        : (fallbackEmail ?? 'Não informado');
     final nome = map['nome']?.toString().trim().isNotEmpty == true
         ? map['nome'].toString().trim()
         : _generateFallbackName(email);
     final telefone = map['telefone']?.toString().trim().isNotEmpty == true
         ? map['telefone'].toString().trim()
-        : 'Nao informado';
+        : 'Não informado';
     final notificacoesVisualizadas = map['notificacoesVisualizadas'] is List
         ? (map['notificacoesVisualizadas'] as List)
               .map((item) => item.toString())
@@ -79,7 +79,7 @@ class UsuarioModel {
 
   static String firstName(String? fullName) {
     if (fullName == null || fullName.trim().isEmpty) {
-      return 'Usuario';
+      return 'Usuário';
     }
 
     return fullName.trim().split(RegExp(r'\s+')).first;
@@ -88,7 +88,7 @@ class UsuarioModel {
   static String _generateFallbackName(String email) {
     final localPart = email.split('@').first.trim();
     if (localPart.isEmpty) {
-      return 'Usuario';
+      return 'Usuário';
     }
 
     final name = localPart.replaceAll('.', ' ');

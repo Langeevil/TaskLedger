@@ -68,12 +68,12 @@ class _TelaLoginState extends State<TelaLogin> {
         final codigo = e.toString();
 
         if (codigo.contains('user-not-found')) {
-          mensagemErro = 'UsuÃ¡rio nÃ£o encontrado';
+          mensagemErro = 'Usuário não encontrado';
         } else if (codigo.contains('wrong-password') ||
             codigo.contains('invalid-credential')) {
           mensagemErro = 'Senha incorreta';
         } else if (codigo.contains('invalid-email')) {
-          mensagemErro = 'E-mail invÃ¡lido';
+          mensagemErro = 'E-mail inválido';
         }
 
         if (mounted) {
@@ -177,7 +177,7 @@ class _TelaLoginState extends State<TelaLogin> {
                                     return 'Digite seu e-mail';
                                   }
                                   if (!value.contains('@')) {
-                                    return 'E-mail invÃ¡lido';
+                                    return 'E-mail inválido';
                                   }
                                   return null;
                                 },
@@ -280,7 +280,7 @@ class _TelaLoginState extends State<TelaLogin> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    'NÃ£o tem conta? ',
+                                    'Não tem conta? ',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 14,

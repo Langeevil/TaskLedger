@@ -42,7 +42,7 @@ class ImgbbService {
     final imageUrl = displayUrl?.isNotEmpty == true ? displayUrl : url;
 
     if (imageUrl == null || imageUrl.isEmpty) {
-      throw StateError('ImgBB nao retornou a URL da imagem.');
+      throw StateError('ImgBB não retornou a URL da imagem.');
     }
 
     return imageUrl;
@@ -56,7 +56,7 @@ class ImgbbService {
         detalhe = decoded['error']['message']?.toString() ?? detalhe;
       }
     } catch (_) {
-      // Mantem o corpo original quando a resposta nao for JSON.
+      // Mantém o corpo original quando a resposta não for JSON.
     }
 
     return 'Erro ao enviar imagem para ImgBB: ${response.statusCode} - $detalhe';

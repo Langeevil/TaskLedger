@@ -58,7 +58,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
       case 'fazendo':
         return 'Fazendo';
       case 'concluido':
-        return 'Concluido';
+        return 'Concluído';
       default:
         return 'A Fazer';
     }
@@ -220,7 +220,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _construirResumo(
-                    titulo: 'Concluido',
+                    titulo: 'Concluído',
                     valor: _contarPorStatus('concluido').toString(),
                     cor: const Color(0xFF10B981),
                   ),
@@ -251,7 +251,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
                   ),
                   const SizedBox(width: 10),
                   _construirChipFiltro(
-                    label: 'Concluido',
+                    label: 'Concluído',
                     ativo: _filtroStatus == 'concluido',
                     onTap: () => setState(() => _filtroStatus = 'concluido'),
                   ),
@@ -276,7 +276,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
                   ),
                   const SizedBox(width: 10),
                   _construirChipFiltro(
-                    label: 'Media',
+                    label: 'Média',
                     ativo: _filtroPrioridade == 'media',
                     onTap: () => setState(() => _filtroPrioridade = 'media'),
                   ),
@@ -720,7 +720,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
       setState(() {
         _salvando = false;
       });
-      _mostrarMensagem('Nao foi possivel salvar a tarefa.');
+      _mostrarMensagem('Não foi possível salvar a tarefa.');
     }
   }
 
@@ -812,7 +812,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
             const SizedBox(height: 16),
             _construirCampoTexto(
               controlador: _controladorDescricao,
-              label: 'Descricao',
+              label: 'Descrição',
               maxLines: 4,
               textInputAction: TextInputAction.newline,
               validador: (_) => null,
@@ -824,7 +824,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
               itens: const {
                 'a_fazer': 'A Fazer',
                 'fazendo': 'Fazendo',
-                'concluido': 'Concluido',
+                'concluido': 'Concluído',
               },
               onChanged: (valor) => setState(() => _status = valor!),
             ),
@@ -832,7 +832,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
             _construirDropdown(
               label: 'Prioridade',
               valor: _prioridade,
-              itens: const {'alta': 'Alta', 'media': 'Media', 'baixa': 'Baixa'},
+              itens: const {'alta': 'Alta', 'media': 'Média', 'baixa': 'Baixa'},
               onChanged: (valor) => setState(() => _prioridade = valor!),
             ),
             const SizedBox(height: 16),
@@ -899,7 +899,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
                             ),
                           ),
                         )
-                      : Text(_editando ? 'Salvar alteracoes' : 'Criar tarefa'),
+                      : Text(_editando ? 'Salvar alterações' : 'Criar tarefa'),
                 ),
               ),
             ),
@@ -1030,7 +1030,7 @@ class _ModalTarefaState extends State<_ModalTarefa> {
             ),
             const SizedBox(height: 8),
             Text(
-              'As informacoes da tarefa foram salvas com sucesso.',
+              'As informações da tarefa foram salvas com sucesso.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white.withOpacity(0.7)),
             ),

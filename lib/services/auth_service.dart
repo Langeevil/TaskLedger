@@ -67,7 +67,7 @@ class AuthService {
     if (user == null || email == null) {
       throw FirebaseAuthException(
         code: 'user-not-found',
-        message: 'Usuario nao autenticado.',
+        message: 'Usuário não autenticado.',
       );
     }
 

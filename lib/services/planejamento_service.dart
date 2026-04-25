@@ -65,7 +65,7 @@ class PlanejamentoService {
   Future<void> update(PlanejamentoModel planejamento) async {
     final id = planejamento.id;
     if (id == null || id.isEmpty) {
-      throw ArgumentError('Planejamento sem id para atualizacao.');
+      throw ArgumentError('Planejamento sem id para atualização.');
     }
 
     final record = await _readRecord();
@@ -73,7 +73,7 @@ class PlanejamentoService {
     final index = planejamentos.indexWhere((item) => item.id == id);
 
     if (index == -1) {
-      throw StateError('Planejamento nao encontrado.');
+      throw StateError('Planejamento não encontrado.');
     }
 
     planejamentos[index] = PlanejamentoModel(
@@ -102,7 +102,7 @@ class PlanejamentoService {
     final index = planejamentos.indexWhere((item) => item.id == id);
 
     if (index == -1) {
-      throw StateError('Planejamento nao encontrado.');
+      throw StateError('Planejamento não encontrado.');
     }
 
     final atual = planejamentos[index];
@@ -185,7 +185,7 @@ class PlanejamentoService {
         detalhe = decoded['message'].toString();
       }
     } catch (_) {
-      // Mantem o corpo original quando a resposta nao for JSON.
+      // Mantém o corpo original quando a resposta não for JSON.
     }
 
     return 'Erro ao $operacao JSONBin: ${response.statusCode} - $detalhe';
