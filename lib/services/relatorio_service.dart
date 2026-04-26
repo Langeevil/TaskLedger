@@ -69,7 +69,7 @@ class RelatorioService {
           'status',
           'em_andamento',
         ).toDouble(),
-        'Concluidos': _contarPorCampo(
+        'Concluídos': _contarPorCampo(
           planejamentosMap,
           'status',
           'concluido',

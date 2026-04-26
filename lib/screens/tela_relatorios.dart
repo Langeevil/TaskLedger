@@ -6,6 +6,7 @@ import '../services/relatorio_pdf_service.dart';
 import '../services/relatorio_service.dart';
 import '../utils/app_currency_utils.dart';
 import '../utils/app_date_utils.dart';
+import '../utils/responsive_utils.dart';
 
 class TelaRelatorios extends StatefulWidget {
   const TelaRelatorios({
@@ -333,6 +334,67 @@ class _TelaRelatoriosState extends State<TelaRelatorios> {
     );
   }
 
+  Widget _construirCardsResumoGrid({
+    required double width,
+    required RelatorioResumoModel resumo,
+  }) {
+    const spacing = 14.0;
+    final columns = AppResponsive.gridColumns(
+      width,
+      mobile: 2,
+      tablet: 2,
+      desktop: 4,
+    );
+    final itemWidth = AppResponsive.itemWidth(
+      availableWidth: width,
+      columns: columns,
+      spacing: spacing,
+    );
+
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      children: [
+        SizedBox(
+          width: itemWidth,
+          child: _construirCardResumo(
+            titulo: 'Tarefas ativas',
+            valor: '${resumo.tarefasAtivas}',
+            icone: Icons.task_alt,
+            cor: const Color(0xFF6366F1),
+          ),
+        ),
+        SizedBox(
+          width: itemWidth,
+          child: _construirCardResumo(
+            titulo: 'Saldo atual',
+            valor: _formatarMoeda(resumo.saldo),
+            icone: Icons.account_balance_wallet_outlined,
+            cor: const Color(0xFF10B981),
+          ),
+        ),
+        SizedBox(
+          width: itemWidth,
+          child: _construirCardResumo(
+            titulo: 'Projetos',
+            valor: '${resumo.totalProjetos}',
+            icone: Icons.event_note_outlined,
+            cor: const Color(0xFF38BDF8),
+          ),
+        ),
+        SizedBox(
+          width: itemWidth,
+          child: _construirCardResumo(
+            titulo: 'Tarefas vencidas',
+            valor: '${resumo.tarefasVencidas}',
+            icone: Icons.warning_amber_rounded,
+            cor: const Color(0xFFF97316),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _construirBlocoRelatorio({
     required String titulo,
     required String subtitulo,
@@ -427,7 +489,7 @@ class _TelaRelatoriosState extends State<TelaRelatorios> {
     const coresTarefaStatus = <String, Color>{
       'A fazer': Color(0xFF6366F1),
       'Em andamento': Color(0xFFF59E0B),
-      'Concluidas': Color(0xFF10B981),
+      'Concluídas': Color(0xFF10B981),
     };
     const coresPrioridade = <String, Color>{
       'Alta': Color(0xFFEF4444),
@@ -460,52 +522,15 @@ class _TelaRelatoriosState extends State<TelaRelatorios> {
     final categorias = _mapearBarras(resumo.totaisPorCategoria, coresCategoria);
     final resumoFinanceiro = _resumoFinanceiro(resumo);
 
+    final width = MediaQuery.of(context).size.width;
+    final contentWidth = AppResponsive.maxContentWidth(width);
+    final availableWidth =
+        contentWidth - AppResponsive.pagePadding(width).horizontal;
+
     final secoes = <Widget>[
       Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _construirCardResumo(
-                  titulo: 'Tarefas ativas',
-                  valor: '${resumo.tarefasAtivas}',
-                  icone: Icons.task_alt,
-                  cor: const Color(0xFF6366F1),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _construirCardResumo(
-                  titulo: 'Saldo atual',
-                  valor: _formatarMoeda(resumo.saldo),
-                  icone: Icons.account_balance_wallet_outlined,
-                  cor: const Color(0xFF10B981),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _construirCardResumo(
-                  titulo: 'Projetos',
-                  valor: '${resumo.totalProjetos}',
-                  icone: Icons.event_note_outlined,
-                  cor: const Color(0xFF38BDF8),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _construirCardResumo(
-                  titulo: 'Tarefas vencidas',
-                  valor: '${resumo.tarefasVencidas}',
-                  icone: Icons.warning_amber_rounded,
-                  cor: const Color(0xFFF97316),
-                ),
-              ),
-            ],
-          ),
+          _construirCardsResumoGrid(width: availableWidth, resumo: resumo),
           const SizedBox(height: 20),
           _construirBlocoRelatorio(
             titulo: 'Panorama de tarefas',
@@ -516,7 +541,7 @@ class _TelaRelatoriosState extends State<TelaRelatorios> {
           _construirBlocoRelatorio(
             titulo: 'Resumo financeiro',
             subtitulo:
-                'Comparativo entre entradas, saidas e saldo consolidado.',
+                'Comparativo entre entradas, sa?das e saldo consolidado.',
             child: _construirGraficoBarras(resumoFinanceiro, monetario: true),
           ),
           _construirBlocoRelatorio(
@@ -582,131 +607,149 @@ class _TelaRelatoriosState extends State<TelaRelatorios> {
   Widget build(BuildContext context) {
     const secoes = <String>['Visão geral', 'Tarefas', 'Finanças', 'Projetos'];
 
-    return RefreshIndicator(
-      onRefresh: _carregarResumo,
-      color: const Color(0xFF6366F1),
-      backgroundColor: const Color(0xFF1A1F3A),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final padding = AppResponsive.pagePadding(width);
+        final contentWidth = AppResponsive.maxContentWidth(width);
+
+        return RefreshIndicator(
+          onRefresh: _carregarResumo,
+          color: const Color(0xFF6366F1),
+          backgroundColor: const Color(0xFF1A1F3A),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: Padding(
+                  padding: padding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Relatórios',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _resumo?.ultimaAtualizacao == null
-                            ? 'Leitura consolidada das informações já registradas no app.'
-                            : 'Atualizado com base nos dados registrados ate ${AppDateUtils.format(_resumo!.ultimaAtualizacao!)}.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.7),
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF11182F),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: _carregandoResumo ? null : _gerarPdf,
-                        icon: _gerandoPdf
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF6366F1),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Relatórios',
+                                  style: TextStyle(
+                                    fontSize: AppResponsive.headingSize(width),
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
                                   ),
                                 ),
-                              )
-                            : const Icon(Icons.picture_as_pdf_outlined),
-                        color: const Color(0xFF6366F1),
-                        tooltip: 'Gerar PDF',
+                                const SizedBox(height: 10),
+                                Text(
+                                  _resumo?.ultimaAtualizacao == null
+                                      ? 'Leitura consolidada das informações já registradas no app.'
+                                      : 'Atualizado com base nos dados registrados até ${AppDateUtils.format(_resumo!.ultimaAtualizacao!)}.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white.withOpacity(0.7),
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF11182F),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.06),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  onPressed: _carregandoResumo
+                                      ? null
+                                      : _gerarPdf,
+                                  icon: _gerandoPdf
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFF6366F1),
+                                                ),
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.picture_as_pdf_outlined,
+                                        ),
+                                  color: const Color(0xFF6366F1),
+                                  tooltip: 'Gerar PDF',
+                                ),
+                                IconButton(
+                                  onPressed: _carregarResumo,
+                                  icon: const Icon(Icons.auto_graph_rounded),
+                                  color: const Color(0xFF6366F1),
+                                  tooltip: 'Atualizar relatórios',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        onPressed: _carregarResumo,
-                        icon: const Icon(Icons.auto_graph_rounded),
-                        color: const Color(0xFF6366F1),
-                        tooltip: 'Atualizar relatórios',
+                      const SizedBox(height: 22),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: List.generate(secoes.length, (indice) {
+                          final ativo = _secaoSelecionada == indice;
+                          return ChoiceChip(
+                            selected: ativo,
+                            label: Text(secoes[indice]),
+                            onSelected: (_) {
+                              setState(() {
+                                _secaoSelecionada = indice;
+                              });
+                            },
+                            backgroundColor: const Color(0xFF11182F),
+                            selectedColor: const Color(
+                              0xFF6366F1,
+                            ).withOpacity(0.28),
+                            side: BorderSide(
+                              color: ativo
+                                  ? const Color(0xFF6366F1).withOpacity(0.5)
+                                  : Colors.white.withOpacity(0.08),
+                            ),
+                            labelStyle: TextStyle(
+                              color: Colors.white.withOpacity(ativo ? 1 : 0.72),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            showCheckmark: false,
+                          );
+                        }),
                       ),
+                      const SizedBox(height: 24),
+                      if (_carregandoResumo)
+                        const Center(child: CircularProgressIndicator())
+                      else if (_resumo == null)
+                        _construirEstadoVazio(
+                          'Não foi possível consolidar os dados dos relatórios agora.',
+                        )
+                      else
+                        _construirSecoes(_resumo!),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(secoes.length, (indice) {
-                  final ativo = _secaoSelecionada == indice;
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      right: indice == secoes.length - 1 ? 0 : 10,
-                    ),
-                    child: ChoiceChip(
-                      selected: ativo,
-                      label: Text(secoes[indice]),
-                      onSelected: (_) {
-                        setState(() {
-                          _secaoSelecionada = indice;
-                        });
-                      },
-                      backgroundColor: const Color(0xFF11182F),
-                      selectedColor: const Color(0xFF6366F1).withOpacity(0.28),
-                      side: BorderSide(
-                        color: ativo
-                            ? const Color(0xFF6366F1).withOpacity(0.5)
-                            : Colors.white.withOpacity(0.08),
-                      ),
-                      labelStyle: TextStyle(
-                        color: Colors.white.withOpacity(ativo ? 1 : 0.72),
-                        fontWeight: FontWeight.w600,
-                      ),
-                      showCheckmark: false,
-                    ),
-                  );
-                }),
               ),
             ),
-            const SizedBox(height: 24),
-            if (_carregandoResumo)
-              const Center(child: CircularProgressIndicator())
-            else if (_resumo == null)
-              _construirEstadoVazio(
-                'Não foi possível consolidar os dados dos relatórios agora.',
-              )
-            else
-              _construirSecoes(_resumo!),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

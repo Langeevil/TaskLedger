@@ -1,9 +1,10 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/user_service.dart';
+import '../utils/responsive_utils.dart';
 
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
@@ -215,7 +216,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
     const meses = [
       'Janeiro',
       'Fevereiro',
-      'Marco',
+      'Março',
       'Abril',
       'Maio',
       'Junho',
@@ -252,7 +253,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
         notificacoes.add({
           'tipo': 'tarefa',
           'titulo': 'Tarefa vencida',
-          'mensagem': '$titulo ficou pendente apos ${_formatarData(prazo)}.',
+          'mensagem': '$titulo ficou pendente após ${_formatarData(prazo)}.',
           'icone': Icons.warning_amber_rounded,
           'cor': const Color(0xFFEF4444),
           'ordem': 0,
@@ -273,7 +274,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
       notificacoes.add({
         'tipo': 'financas',
         'titulo': 'Saldo negativo',
-        'mensagem': 'Seu saldo atual esta em ${_formatarMoeda(_saldo)}.',
+        'mensagem': 'Seu saldo atual está em ${_formatarMoeda(_saldo)}.',
         'icone': Icons.account_balance_wallet_outlined,
         'cor': const Color(0xFFEF4444),
         'ordem': 2,
@@ -423,7 +424,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Quando houver tarefas urgentes ou alertas financeiros, eles aparecerao aqui.',
+                                  'Quando houver tarefas urgentes ou alertas financeiros, eles aparecerão aqui.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.6),
@@ -530,290 +531,326 @@ class _TelaDashboardState extends State<TelaDashboard> {
         .toList();
     final transacoesRecentes = _transacoes.take(3).toList();
 
-    return RefreshIndicator(
-      onRefresh: _carregarDados,
-      color: const Color(0xFF6366F1),
-      backgroundColor: const Color(0xFF1A1F3A),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bem-vindo, ${_obterPrimeiroNome(_dadosUsuario['nome']?.toString())}!',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '${DateTime.now().day} de ${_obterMes(DateTime.now().month)} de ${DateTime.now().year}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
-                ),
-              ),
-              if (_mensagemErro != null) ...[
-                const SizedBox(height: 20),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2B1B1B).withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFFF6B6B)),
-                  ),
-                  child: Text(
-                    _mensagemErro!,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: _construirCardInfo(
-                      titulo: 'Tarefas',
-                      valor: '$_totalTarefas',
-                      icone: Icons.task_alt,
-                      cor: const Color(0xFF6366F1),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _construirCardInfo(
-                      titulo: 'Despesas',
-                      valor: _formatarMoeda(_totalGastos),
-                      icone: Icons.trending_down,
-                      cor: const Color(0xFFF97316),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _construirCardInfo(
-                      titulo: 'Receitas',
-                      valor: _formatarMoeda(_totalReceitas),
-                      icone: Icons.trending_up,
-                      cor: const Color(0xFF10B981),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _construirCardInfo(
-                      titulo: 'Saldo',
-                      valor: _formatarMoeda(_saldo),
-                      icone: Icons.account_balance_wallet_outlined,
-                      cor: const Color(0xFFF59E0B),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              _construirSecao(
-                titulo: 'Próximas tarefas',
-                acao: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _indiceTelaAtual = 1;
-                    });
-                  },
-                  child: const Text('Ver tudo'),
-                ),
-                child: tarefasPendentes.isEmpty
-                    ? _construirEstadoVazio(
-                        icone: Icons.task_alt,
-                        texto: 'Você ainda não criou tarefas.',
-                      )
-                    : Column(
-                        children: tarefasPendentes.map((tarefa) {
-                          final prazo = _converterParaDateTime(tarefa['prazo']);
-                          final prioridade =
-                              tarefa['prioridade']?.toString() ?? '';
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF1A1F3A,
-                                ).withOpacity(0.55),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFF6366F1,
-                                  ).withOpacity(0.18),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: _corPrioridade(
-                                        prioridade,
-                                      ).withOpacity(0.18),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.bolt,
-                                      color: _corPrioridade(prioridade),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          tarefa['titulo']?.toString() ??
-                                              'Sem titulo',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          prazo != null
-                                              ? 'Prazo: ${_formatarData(prazo)}'
-                                              : 'Sem prazo definido',
-                                          style: TextStyle(
-                                            color: Colors.white.withOpacity(
-                                              0.65,
-                                            ),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final padding = AppResponsive.pagePadding(width);
+        final contentWidth = AppResponsive.maxContentWidth(width);
+
+        return RefreshIndicator(
+          onRefresh: _carregarDados,
+          color: const Color(0xFF6366F1),
+          backgroundColor: const Color(0xFF1A1F3A),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: Padding(
+                  padding: padding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bem-vindo, ${_obterPrimeiroNome(_dadosUsuario['nome']?.toString())}!',
+                        style: TextStyle(
+                          fontSize: AppResponsive.headingSize(width),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-              ),
-              const SizedBox(height: 20),
-              _construirSecao(
-                titulo: 'Movimentacoes recentes',
-                acao: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _indiceTelaAtual = 2;
-                    });
-                  },
-                  child: const Text('Ver tudo'),
-                ),
-                child: transacoesRecentes.isEmpty
-                    ? _construirEstadoVazio(
-                        icone: Icons.receipt_long,
-                        texto: 'Você ainda não registrou lançamentos.',
-                      )
-                    : Column(
-                        children: transacoesRecentes.map((transacao) {
-                          final tipo =
-                              transacao['tipo']?.toString() ?? 'despesa';
-                          final cor = tipo == 'receita'
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFFF97316);
-                          final data = _converterParaDateTime(
-                            transacao['data'],
-                          );
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF1A1F3A,
-                                ).withOpacity(0.55),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFF6366F1,
-                                  ).withOpacity(0.18),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: cor.withOpacity(0.18),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      tipo == 'receita'
-                                          ? Icons.arrow_downward_rounded
-                                          : Icons.arrow_upward_rounded,
-                                      color: cor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          transacao['titulo']?.toString() ??
-                                              'Lançamento',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          data != null
-                                              ? _formatarData(data)
-                                              : 'Sem data',
-                                          style: TextStyle(
-                                            color: Colors.white.withOpacity(
-                                              0.65,
-                                            ),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    _formatarMoeda(
-                                      _converterParaDouble(transacao['valor']),
-                                    ),
-                                    style: TextStyle(
-                                      color: cor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${DateTime.now().day} de ${_obterMes(DateTime.now().month)} de ${DateTime.now().year}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
                       ),
+                      if (_mensagemErro != null) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2B1B1B).withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFF6B6B)),
+                          ),
+                          child: Text(
+                            _mensagemErro!,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 32),
+                      _construirCardsInfoGrid(
+                        width: width,
+                        children: [
+                          _construirCardInfo(
+                            titulo: 'Tarefas',
+                            valor: '$_totalTarefas',
+                            icone: Icons.task_alt,
+                            cor: const Color(0xFF6366F1),
+                          ),
+                          _construirCardInfo(
+                            titulo: 'Despesas',
+                            valor: _formatarMoeda(_totalGastos),
+                            icone: Icons.trending_down,
+                            cor: const Color(0xFFF97316),
+                          ),
+                          _construirCardInfo(
+                            titulo: 'Receitas',
+                            valor: _formatarMoeda(_totalReceitas),
+                            icone: Icons.trending_up,
+                            cor: const Color(0xFF10B981),
+                          ),
+                          _construirCardInfo(
+                            titulo: 'Saldo',
+                            valor: _formatarMoeda(_saldo),
+                            icone: Icons.account_balance_wallet_outlined,
+                            cor: const Color(0xFFF59E0B),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      _construirSecao(
+                        titulo: 'Próximas tarefas',
+                        acao: TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _indiceTelaAtual = 1;
+                            });
+                          },
+                          child: const Text('Ver tudo'),
+                        ),
+                        child: tarefasPendentes.isEmpty
+                            ? _construirEstadoVazio(
+                                icone: Icons.task_alt,
+                                texto: 'Você ainda não criou tarefas.',
+                              )
+                            : Column(
+                                children: tarefasPendentes.map((tarefa) {
+                                  final prazo = _converterParaDateTime(
+                                    tarefa['prazo'],
+                                  );
+                                  final prioridade =
+                                      tarefa['prioridade']?.toString() ?? '';
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF1A1F3A,
+                                        ).withOpacity(0.55),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF6366F1,
+                                          ).withOpacity(0.18),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 42,
+                                            height: 42,
+                                            decoration: BoxDecoration(
+                                              color: _corPrioridade(
+                                                prioridade,
+                                              ).withOpacity(0.18),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              Icons.bolt,
+                                              color: _corPrioridade(prioridade),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  tarefa['titulo']
+                                                          ?.toString() ??
+                                                      'Sem título',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  prazo != null
+                                                      ? 'Prazo: ${_formatarData(prazo)}'
+                                                      : 'Sem prazo definido',
+                                                  style: TextStyle(
+                                                    color: Colors.white
+                                                        .withOpacity(0.65),
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                      ),
+                      const SizedBox(height: 20),
+                      _construirSecao(
+                        titulo: 'Movimentações recentes',
+                        acao: TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _indiceTelaAtual = 2;
+                            });
+                          },
+                          child: const Text('Ver tudo'),
+                        ),
+                        child: transacoesRecentes.isEmpty
+                            ? _construirEstadoVazio(
+                                icone: Icons.receipt_long,
+                                texto: 'Você ainda não registrou lançamentos.',
+                              )
+                            : Column(
+                                children: transacoesRecentes.map((transacao) {
+                                  final tipo =
+                                      transacao['tipo']?.toString() ??
+                                      'despesa';
+                                  final cor = tipo == 'receita'
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFF97316);
+                                  final data = _converterParaDateTime(
+                                    transacao['data'],
+                                  );
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF1A1F3A,
+                                        ).withOpacity(0.55),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF6366F1,
+                                          ).withOpacity(0.18),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 42,
+                                            height: 42,
+                                            decoration: BoxDecoration(
+                                              color: cor.withOpacity(0.18),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              tipo == 'receita'
+                                                  ? Icons.arrow_downward_rounded
+                                                  : Icons.arrow_upward_rounded,
+                                              color: cor,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  transacao['titulo']
+                                                          ?.toString() ??
+                                                      'Lançamento',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  data != null
+                                                      ? _formatarData(data)
+                                                      : 'Sem data',
+                                                  style: TextStyle(
+                                                    color: Colors.white
+                                                        .withOpacity(0.65),
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Text(
+                                            _formatarMoeda(
+                                              _converterParaDouble(
+                                                transacao['valor'],
+                                              ),
+                                            ),
+                                            style: TextStyle(
+                                              color: cor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 28),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _construirCardsInfoGrid({
+    required double width,
+    required List<Widget> children,
+  }) {
+    final orientation = MediaQuery.of(context).orientation;
+    final columns = AppResponsive.gridColumns(
+      width,
+      mobile: 2,
+      tablet: 2,
+      desktop: 4,
+      landscape: orientation == Orientation.landscape,
+    );
+    final availableWidth =
+        AppResponsive.maxContentWidth(width).clamp(0, width).toDouble() -
+        AppResponsive.pagePadding(width).horizontal;
+    final itemWidth = AppResponsive.itemWidth(
+      availableWidth: availableWidth,
+      columns: columns,
+      spacing: 16,
+    );
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      children: children
+          .map((child) => SizedBox(width: itemWidth, child: child))
+          .toList(),
     );
   }
 
@@ -1028,256 +1065,270 @@ class _TelaDashboardState extends State<TelaDashboard> {
       );
     }
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A).withOpacity(0.8),
-              const Color(0xFF0F1729),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Builder(
-                      builder: (context) => GestureDetector(
-                        onTap: () => Scaffold.of(context).openDrawer(),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6366F1).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(0xFF6366F1).withOpacity(0.3),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.menu,
-                            color: Color(0xFF6366F1),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      'TaskLedger',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Stack(
-                      clipBehavior: Clip.none,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final headerPadding = AppResponsive.pagePadding(width);
+
+        return Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF0A0E27),
+                  const Color(0xFF1A1F3A).withOpacity(0.8),
+                  const Color(0xFF0F1729),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: headerPadding,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        GestureDetector(
-                          onTap: _abrirCentralNotificacoes,
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6366F1).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xFF6366F1).withOpacity(0.3),
+                        Builder(
+                          builder: (context) => GestureDetector(
+                            onTap: () => Scaffold.of(context).openDrawer(),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6366F1).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF6366F1,
+                                  ).withOpacity(0.3),
+                                ),
                               ),
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none,
-                              color: Color(0xFF6366F1),
+                              child: const Icon(
+                                Icons.menu,
+                                color: Color(0xFF6366F1),
+                              ),
                             ),
                           ),
                         ),
-                        if (notificacoes.isNotEmpty)
-                          Positioned(
-                            right: -4,
-                            top: -6,
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                minWidth: 20,
-                                minHeight: 20,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF0F1729),
-                                  width: 1.5,
+                        Text(
+                          'TaskLedger',
+                          style: TextStyle(
+                            fontSize: AppResponsive.isMobile(width) ? 22 : 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            GestureDetector(
+                              onTap: _abrirCentralNotificacoes,
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF6366F1,
+                                  ).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF6366F1,
+                                    ).withOpacity(0.3),
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                notificacoes.length > 9
-                                    ? '9+'
-                                    : '${notificacoes.length}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                child: const Icon(
+                                  Icons.notifications_none,
+                                  color: Color(0xFF6366F1),
                                 ),
                               ),
                             ),
-                          ),
+                            if (notificacoes.isNotEmpty)
+                              Positioned(
+                                right: -4,
+                                top: -6,
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 20,
+                                    minHeight: 20,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: const Color(0xFF0F1729),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    notificacoes.length > 9
+                                        ? '9+'
+                                        : '${notificacoes.length}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  Expanded(child: _construirTelaAtual()),
+                ],
               ),
-              Expanded(child: _construirTelaAtual()),
-            ],
-          ),
-        ),
-      ),
-      drawer: Drawer(
-        backgroundColor: const Color(0xFF0A0E27),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0A0E27),
-                const Color(0xFF1A1F3A).withOpacity(0.8),
-              ],
             ),
           ),
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomRight: Radius.circular(20),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _obterPrimeiroNome(_dadosUsuario['nome']?.toString()),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _dadosUsuario['email']?.toString() ?? 'email@exemplo.com',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
+          drawer: Drawer(
+            backgroundColor: const Color(0xFF0A0E27),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF0A0E27),
+                    const Color(0xFF1A1F3A).withOpacity(0.8),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              _construirItemDrawer(
-                indice: 0,
-                titulo: 'Inicio',
-                icone: Icons.home_outlined,
-              ),
-              _construirItemDrawer(
-                indice: 1,
-                titulo: 'Tarefas',
-                icone: Icons.task_alt,
-              ),
-              _construirItemDrawer(
-                indice: 2,
-                titulo: 'Finanças',
-                icone: Icons.attach_money,
-              ),
-              _construirItemDrawer(
-                indice: 3,
-                titulo: 'Planejamento',
-                icone: Icons.event_note_outlined,
-              ),
-              _construirItemDrawer(
-                indice: 4,
-                titulo: 'Relatórios',
-                icone: Icons.bar_chart_outlined,
-              ),
-              _construirItemDrawer(
-                indice: 5,
-                titulo: 'Perfil',
-                icone: Icons.person_outline,
-              ),
-              const SizedBox(height: 20),
-              const Divider(color: Color(0xFF6366F1), thickness: 0.5),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(
-                  Icons.settings_outlined,
-                  color: Color(0xFF6366F1),
-                ),
-                title: const Text(
-                  'Configuracoes',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Funcionalidade em desenvolvimento'),
-                      backgroundColor: Color(0xFF6366F1),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomRight: Radius.circular(20),
+                      ),
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text(
-                  'Sair',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _obterPrimeiroNome(_dadosUsuario['nome']?.toString()),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _dadosUsuario['email']?.toString() ??
+                              'email@exemplo.com',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _sair();
-                },
+                  const SizedBox(height: 20),
+                  _construirItemDrawer(
+                    indice: 0,
+                    titulo: 'Início',
+                    icone: Icons.home_outlined,
+                  ),
+                  _construirItemDrawer(
+                    indice: 1,
+                    titulo: 'Tarefas',
+                    icone: Icons.task_alt,
+                  ),
+                  _construirItemDrawer(
+                    indice: 2,
+                    titulo: 'Finanças',
+                    icone: Icons.attach_money,
+                  ),
+                  _construirItemDrawer(
+                    indice: 3,
+                    titulo: 'Planejamento',
+                    icone: Icons.event_note_outlined,
+                  ),
+                  _construirItemDrawer(
+                    indice: 4,
+                    titulo: 'Relatórios',
+                    icone: Icons.bar_chart_outlined,
+                  ),
+                  _construirItemDrawer(
+                    indice: 5,
+                    titulo: 'Perfil',
+                    icone: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(color: Color(0xFF6366F1), thickness: 0.5),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.settings_outlined,
+                      color: Color(0xFF6366F1),
+                    ),
+                    title: const Text(
+                      'Configurações',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Funcionalidade em desenvolvimento'),
+                          backgroundColor: Color(0xFF6366F1),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text(
+                      'Sair',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _sair();
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

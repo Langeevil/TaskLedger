@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/tarefa_model.dart';
 import '../services/tarefa_service.dart';
 import '../utils/app_date_utils.dart';
+import '../utils/responsive_utils.dart';
 
 class TelaTarefas extends StatefulWidget {
   const TelaTarefas({
@@ -166,152 +167,181 @@ class _TelaTarefasState extends State<TelaTarefas> {
     final tarefasFiltradas = _tarefasFiltradas;
     const secoes = ['a_fazer', 'fazendo', 'concluido'];
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Minhas Tarefas',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: IconButton(
-                    onPressed: () => _abrirModalTarefa(),
-                    icon: const Icon(Icons.add, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _construirResumo(
-                    titulo: 'A Fazer',
-                    valor: _contarPorStatus('a_fazer').toString(),
-                    cor: const Color(0xFF6366F1),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _construirResumo(
-                    titulo: 'Fazendo',
-                    valor: _contarPorStatus('fazendo').toString(),
-                    cor: const Color(0xFFF59E0B),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _construirResumo(
-                    titulo: 'Concluído',
-                    valor: _contarPorStatus('concluido').toString(),
-                    cor: const Color(0xFF10B981),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _construirChipFiltro(
-                    label: 'Todas',
-                    ativo: _filtroStatus == 'todos',
-                    onTap: () => setState(() => _filtroStatus = 'todos'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'A Fazer',
-                    ativo: _filtroStatus == 'a_fazer',
-                    onTap: () => setState(() => _filtroStatus = 'a_fazer'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Fazendo',
-                    ativo: _filtroStatus == 'fazendo',
-                    onTap: () => setState(() => _filtroStatus = 'fazendo'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Concluído',
-                    ativo: _filtroStatus == 'concluido',
-                    onTap: () => setState(() => _filtroStatus = 'concluido'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _construirChipFiltro(
-                    label: 'Todas prioridades',
-                    ativo: _filtroPrioridade == 'todas',
-                    onTap: () => setState(() => _filtroPrioridade = 'todas'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Alta',
-                    ativo: _filtroPrioridade == 'alta',
-                    onTap: () => setState(() => _filtroPrioridade = 'alta'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Média',
-                    ativo: _filtroPrioridade == 'media',
-                    onTap: () => setState(() => _filtroPrioridade = 'media'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Baixa',
-                    ativo: _filtroPrioridade == 'baixa',
-                    onTap: () => setState(() => _filtroPrioridade = 'baixa'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (tarefasFiltradas.isEmpty)
-              _construirVazio()
-            else
-              Column(
-                children: secoes.map((status) {
-                  final itens = tarefasFiltradas
-                      .where((tarefa) => tarefa['status'] == status)
-                      .toList();
-                  if (itens.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final padding = AppResponsive.pagePadding(width);
+        final contentWidth = AppResponsive.maxContentWidth(width);
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: _construirSecaoStatus(status, itens),
-                  );
-                }).toList(),
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: contentWidth),
+              child: Padding(
+                padding: padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Minhas Tarefas',
+                            style: TextStyle(
+                              fontSize: AppResponsive.headingSize(width),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: IconButton(
+                            onPressed: () => _abrirModalTarefa(),
+                            icon: const Icon(Icons.add, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    _construirResumoGrid(
+                      width: width,
+                      children: [
+                        _construirResumo(
+                          titulo: 'A Fazer',
+                          valor: _contarPorStatus('a_fazer').toString(),
+                          cor: const Color(0xFF6366F1),
+                        ),
+                        _construirResumo(
+                          titulo: 'Fazendo',
+                          valor: _contarPorStatus('fazendo').toString(),
+                          cor: const Color(0xFFF59E0B),
+                        ),
+                        _construirResumo(
+                          titulo: 'Concluído',
+                          valor: _contarPorStatus('concluido').toString(),
+                          cor: const Color(0xFF10B981),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _construirChipFiltro(
+                          label: 'Todas',
+                          ativo: _filtroStatus == 'todos',
+                          onTap: () => setState(() => _filtroStatus = 'todos'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'A Fazer',
+                          ativo: _filtroStatus == 'a_fazer',
+                          onTap: () =>
+                              setState(() => _filtroStatus = 'a_fazer'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Fazendo',
+                          ativo: _filtroStatus == 'fazendo',
+                          onTap: () =>
+                              setState(() => _filtroStatus = 'fazendo'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Concluído',
+                          ativo: _filtroStatus == 'concluido',
+                          onTap: () =>
+                              setState(() => _filtroStatus = 'concluido'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _construirChipFiltro(
+                          label: 'Todas prioridades',
+                          ativo: _filtroPrioridade == 'todas',
+                          onTap: () =>
+                              setState(() => _filtroPrioridade = 'todas'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Alta',
+                          ativo: _filtroPrioridade == 'alta',
+                          onTap: () =>
+                              setState(() => _filtroPrioridade = 'alta'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Média',
+                          ativo: _filtroPrioridade == 'media',
+                          onTap: () =>
+                              setState(() => _filtroPrioridade = 'media'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Baixa',
+                          ativo: _filtroPrioridade == 'baixa',
+                          onTap: () =>
+                              setState(() => _filtroPrioridade = 'baixa'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (tarefasFiltradas.isEmpty)
+                      _construirVazio()
+                    else
+                      Column(
+                        children: secoes.map((status) {
+                          final itens = tarefasFiltradas
+                              .where((tarefa) => tarefa['status'] == status)
+                              .toList();
+                          if (itens.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            child: _construirSecaoStatus(status, itens),
+                          );
+                        }).toList(),
+                      ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _construirResumoGrid({
+    required double width,
+    required List<Widget> children,
+  }) {
+    final columns = AppResponsive.gridColumns(
+      width,
+      mobile: 1,
+      tablet: 3,
+      desktop: 3,
+    );
+    final itemWidth = AppResponsive.itemWidth(
+      availableWidth: width - AppResponsive.pagePadding(width).horizontal,
+      columns: columns,
+    );
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: children
+          .map((child) => SizedBox(width: itemWidth, child: child))
+          .toList(),
     );
   }
 
@@ -456,7 +486,7 @@ class _TelaTarefasState extends State<TelaTarefas> {
                   children: [
                     Expanded(
                       child: Text(
-                        tarefa['titulo']?.toString() ?? 'Sem titulo',
+                        tarefa['titulo']?.toString() ?? 'Sem título',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -736,7 +766,10 @@ class _ModalTarefaState extends State<_ModalTarefa> {
 
   @override
   Widget build(BuildContext context) {
-    final alturaMaxima = MediaQuery.of(context).size.height * 0.72;
+    final size = MediaQuery.of(context).size;
+    final alturaMaxima =
+        size.height * AppResponsive.modalMaxHeightFactor(size.width);
+    final larguraMaxima = AppResponsive.modalMaxWidth(size.width);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
@@ -746,7 +779,10 @@ class _ModalTarefaState extends State<_ModalTarefa> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Container(
-            constraints: BoxConstraints(maxHeight: alturaMaxima),
+            constraints: BoxConstraints(
+              maxHeight: alturaMaxima,
+              maxWidth: larguraMaxima,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xFF0F1729),
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -798,13 +834,13 @@ class _ModalTarefaState extends State<_ModalTarefa> {
             const SizedBox(height: 24),
             _construirCampoTexto(
               controlador: _controladorTitulo,
-              label: 'Titulo',
+              label: 'Título',
               maxLines: 1,
               textInputAction: TextInputAction.next,
               aoEnviar: (_) => FocusScope.of(context).nextFocus(),
               validador: (valor) {
                 if (valor == null || valor.trim().isEmpty) {
-                  return 'Digite um titulo';
+                  return 'Digite um título';
                 }
                 return null;
               },

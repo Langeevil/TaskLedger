@@ -11,6 +11,7 @@ import '../models/transacao_model.dart';
 import '../services/transacao_service.dart';
 import '../utils/app_currency_utils.dart';
 import '../utils/app_date_utils.dart';
+import '../utils/responsive_utils.dart';
 
 class TelaFinancas extends StatefulWidget {
   const TelaFinancas({
@@ -151,109 +152,111 @@ class _TelaFinancasState extends State<TelaFinancas> {
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF11182E).withOpacity(0.82),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Distribuição de despesas',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Mostra quais categorias estão consumindo mais do seu caixa no periodo filtrado.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.68),
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 230,
-            child: Row(
-              children: [
-                Expanded(
-                  child: PieChart(
-                    PieChartData(
-                      centerSpaceRadius: 58,
-                      sectionsSpace: 3,
-                      sections: categorias.map((item) {
-                        final percentual = totalDespesas == 0
-                            ? 0
-                            : (item.total / totalDespesas) * 100;
-                        return PieChartSectionData(
-                          color: item.cor,
-                          value: item.total,
-                          radius: 52,
-                          title: percentual >= 8
-                              ? '${percentual.toStringAsFixed(0)}%'
-                              : '',
-                          titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        );
-                      }).toList(),
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = AppResponsive.isMobile(constraints.maxWidth);
+        final chart = SizedBox(
+          height: compact ? 220 : 230,
+          child: PieChart(
+            PieChartData(
+              centerSpaceRadius: 58,
+              sectionsSpace: 3,
+              sections: categorias.map((item) {
+                final percentual = totalDespesas == 0
+                    ? 0
+                    : (item.total / totalDespesas) * 100;
+                return PieChartSectionData(
+                  color: item.cor,
+                  value: item.total,
+                  radius: 52,
+                  title: percentual >= 8
+                      ? '${percentual.toStringAsFixed(0)}%'
+                      : '',
+                  titleStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total em despesas',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.62),
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _formatarMoeda(totalDespesas),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: categorias
-                                .map(
-                                  (item) => _construirLegendaCategoria(
-                                    item: item,
-                                    totalGeral: totalDespesas,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
-        ],
-      ),
+        );
+        final legend = Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Total em despesas',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.62),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _formatarMoeda(totalDespesas),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 18),
+            ...categorias.map(
+              (item) => _construirLegendaCategoria(
+                item: item,
+                totalGeral: totalDespesas,
+              ),
+            ),
+          ],
+        );
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF11182E).withOpacity(0.82),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFF6366F1).withOpacity(0.18),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Distribuição de despesas',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Mostra quais categorias estão consumindo mais do seu caixa no período filtrado.',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.68),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (compact)
+                Column(children: [chart, const SizedBox(height: 18), legend])
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: chart),
+                    const SizedBox(width: 18),
+                    Expanded(child: legend),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -453,7 +456,7 @@ class _TelaFinancasState extends State<TelaFinancas> {
             style: TextStyle(color: Colors.white),
           ),
           content: const Text(
-            'Esse registro financeiro sera removido permanentemente.',
+            'Esse registro financeiro será removido permanentemente.',
             style: TextStyle(color: Colors.white70),
           ),
           actions: [
@@ -483,199 +486,224 @@ class _TelaFinancasState extends State<TelaFinancas> {
   Widget build(BuildContext context) {
     final transacoesFiltradas = _transacoesFiltradas;
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Finanças',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final padding = AppResponsive.pagePadding(width);
+        final contentWidth = AppResponsive.maxContentWidth(width);
+
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: contentWidth),
+              child: Padding(
+                padding: padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Finanças',
+                            style: TextStyle(
+                              fontSize: AppResponsive.headingSize(width),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF10B981), Color(0xFF6366F1)],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: IconButton(
+                            onPressed: () => _abrirModalLancamento(),
+                            icon: const Icon(Icons.add, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6366F1).withOpacity(0.35),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Resumo do mês atual',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
+                            children: [
+                              SizedBox(
+                                width: AppResponsive.isMobile(width)
+                                    ? double.infinity
+                                    : AppResponsive.itemWidth(
+                                        availableWidth:
+                                            width - padding.horizontal - 48,
+                                        columns: 2,
+                                        spacing: 16,
+                                      ),
+                                child: _construirLinhaResumo(
+                                  titulo: 'Receitas',
+                                  valor: _formatarMoeda(widget.totalReceitas),
+                                ),
+                              ),
+                              SizedBox(
+                                width: AppResponsive.isMobile(width)
+                                    ? double.infinity
+                                    : AppResponsive.itemWidth(
+                                        availableWidth:
+                                            width - padding.horizontal - 48,
+                                        columns: 2,
+                                        spacing: 16,
+                                      ),
+                                child: _construirLinhaResumo(
+                                  titulo: 'Despesas',
+                                  valor: _formatarMoeda(widget.totalGastos),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.22),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Saldo',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                _formatarMoeda(widget.saldo),
+                                style: TextStyle(
+                                  color: widget.saldo >= 0
+                                      ? Colors.white
+                                      : Colors.red.shade100,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _construirChipFiltro(
+                          label: 'Todos',
+                          ativo: _filtroTipo == 'todos',
+                          onTap: () => setState(() => _filtroTipo = 'todos'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Receitas',
+                          ativo: _filtroTipo == 'receita',
+                          onTap: () => setState(() => _filtroTipo = 'receita'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Despesas',
+                          ativo: _filtroTipo == 'despesa',
+                          onTap: () => setState(() => _filtroTipo = 'despesa'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _construirChipFiltro(
+                          label: 'Mês atual',
+                          ativo: _filtroPeriodo == 'mes',
+                          onTap: () => setState(() => _filtroPeriodo = 'mes'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Ultimos 90 dias',
+                          ativo: _filtroPeriodo == '90dias',
+                          onTap: () =>
+                              setState(() => _filtroPeriodo = '90dias'),
+                        ),
+                        _construirChipFiltro(
+                          label: 'Tudo',
+                          ativo: _filtroPeriodo == 'tudo',
+                          onTap: () => setState(() => _filtroPeriodo = 'tudo'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _construirGraficoDespesasPorCategoria(transacoesFiltradas),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Lançamentos',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (transacoesFiltradas.isEmpty)
+                      _construirVazio()
+                    else
+                      Column(
+                        children: transacoesFiltradas
+                            .map(
+                              (transacao) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _construirCardTransacao(transacao),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    const SizedBox(height: 32),
+                  ],
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF10B981), Color(0xFF6366F1)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: IconButton(
-                    onPressed: () => _abrirModalLancamento(),
-                    icon: const Icon(Icons.add, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6366F1).withOpacity(0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Resumo do mês atual',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _construirLinhaResumo(
-                          titulo: 'Receitas',
-                          valor: _formatarMoeda(widget.totalReceitas),
-                        ),
-                      ),
-                      Expanded(
-                        child: _construirLinhaResumo(
-                          titulo: 'Despesas',
-                          valor: _formatarMoeda(widget.totalGastos),
-                          alinhamento: CrossAxisAlignment.end,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.22),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Saldo',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        _formatarMoeda(widget.saldo),
-                        style: TextStyle(
-                          color: widget.saldo >= 0
-                              ? Colors.white
-                              : Colors.red.shade100,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ),
-            const SizedBox(height: 24),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _construirChipFiltro(
-                    label: 'Todos',
-                    ativo: _filtroTipo == 'todos',
-                    onTap: () => setState(() => _filtroTipo = 'todos'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Receitas',
-                    ativo: _filtroTipo == 'receita',
-                    onTap: () => setState(() => _filtroTipo = 'receita'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Despesas',
-                    ativo: _filtroTipo == 'despesa',
-                    onTap: () => setState(() => _filtroTipo = 'despesa'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _construirChipFiltro(
-                    label: 'Mês atual',
-                    ativo: _filtroPeriodo == 'mes',
-                    onTap: () => setState(() => _filtroPeriodo = 'mes'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Ultimos 90 dias',
-                    ativo: _filtroPeriodo == '90dias',
-                    onTap: () => setState(() => _filtroPeriodo = '90dias'),
-                  ),
-                  const SizedBox(width: 10),
-                  _construirChipFiltro(
-                    label: 'Tudo',
-                    ativo: _filtroPeriodo == 'tudo',
-                    onTap: () => setState(() => _filtroPeriodo = 'tudo'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            _construirGraficoDespesasPorCategoria(transacoesFiltradas),
-            const SizedBox(height: 24),
-            const Text(
-              'Lançamentos',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (transacoesFiltradas.isEmpty)
-              _construirVazio()
-            else
-              Column(
-                children: transacoesFiltradas
-                    .map(
-                      (transacao) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _construirCardTransacao(transacao),
-                      ),
-                    )
-                    .toList(),
-              ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1209,7 +1237,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
 
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate() || _data == null) {
-      _mostrarMensagem('Preencha todos os campos obrigatorios.');
+      _mostrarMensagem('Preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -1276,7 +1304,10 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
 
   @override
   Widget build(BuildContext context) {
-    final alturaMaxima = MediaQuery.of(context).size.height * 0.76;
+    final size = MediaQuery.of(context).size;
+    final alturaMaxima =
+        size.height * AppResponsive.modalMaxHeightFactor(size.width);
+    final larguraMaxima = AppResponsive.modalMaxWidth(size.width);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
@@ -1286,7 +1317,10 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Container(
-            constraints: BoxConstraints(maxHeight: alturaMaxima),
+            constraints: BoxConstraints(
+              maxHeight: alturaMaxima,
+              maxWidth: larguraMaxima,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xFF0F1729),
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1338,13 +1372,13 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
             const SizedBox(height: 24),
             _construirCampoTexto(
               controlador: _controladorTitulo,
-              label: 'Titulo',
+              label: 'Título',
               teclado: TextInputType.text,
               textInputAction: TextInputAction.next,
               aoEnviar: (_) => FocusScope.of(context).nextFocus(),
               validador: (valor) {
                 if (valor == null || valor.trim().isEmpty) {
-                  return 'Digite um titulo';
+                  return 'Digite um título';
                 }
                 return null;
               },

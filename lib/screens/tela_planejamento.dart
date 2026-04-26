@@ -10,6 +10,7 @@ import '../models/planejamento_model.dart';
 import '../services/imgbb_service.dart';
 import '../services/planejamento_service.dart';
 import '../utils/app_date_utils.dart';
+import '../utils/responsive_utils.dart';
 
 Widget _cabecalhoImagem(
   BuildContext context, {
@@ -291,7 +292,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          'Esse planejamento sera removido permanentemente.',
+          'Esse planejamento será removido permanentemente.',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -355,110 +356,144 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _carregar,
-      color: const Color(0xFF6366F1),
-      backgroundColor: const Color(0xFF1A1F3A),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Planejamento',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF14B8A6), Color(0xFF6366F1)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: IconButton(
-                    onPressed: () => _abrirModal(),
-                    icon: const Icon(Icons.add, color: Colors.white),
-                  ),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final padding = AppResponsive.pagePadding(width);
+        final contentWidth = AppResponsive.maxContentWidth(width);
+
+        return RefreshIndicator(
+          onRefresh: _carregar,
+          color: const Color(0xFF6366F1),
+          backgroundColor: const Color(0xFF1A1F3A),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
             ),
-            if (_erro != null) ...[
-              const SizedBox(height: 18),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2B1B1B).withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFFF6B6B)),
-                ),
-                child: Text(
-                  _erro!,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _resumo(
-                    'Planejados',
-                    _contar('a_fazer').toString(),
-                    const Color(0xFF6366F1),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _resumo(
-                    'Em andamento',
-                    _contar('em_andamento').toString(),
-                    const Color(0xFFF59E0B),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _resumo(
-                    'Concluídos',
-                    _contar('concluido').toString(),
-                    const Color(0xFF10B981),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _filtrosStatus(),
-            const SizedBox(height: 12),
-            _filtrosPrioridade(),
-            const SizedBox(height: 24),
-            if (_filtrados.isEmpty)
-              _vazio()
-            else
-              Column(
-                children: _filtrados
-                    .map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _card(item),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: Padding(
+                  padding: padding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Planejamento',
+                              style: TextStyle(
+                                fontSize: AppResponsive.headingSize(width),
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF14B8A6), Color(0xFF6366F1)],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: IconButton(
+                              onPressed: () => _abrirModal(),
+                              icon: const Icon(Icons.add, color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                    .toList(),
+                      if (_erro != null) ...[
+                        const SizedBox(height: 18),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF2B1B1B,
+                            ).withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFF6B6B)),
+                          ),
+                          child: Text(
+                            _erro!,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      _resumoGrid(
+                        width: width,
+                        children: [
+                          _resumo(
+                            'Planejados',
+                            _contar('a_fazer').toString(),
+                            const Color(0xFF6366F1),
+                          ),
+                          _resumo(
+                            'Em andamento',
+                            _contar('em_andamento').toString(),
+                            const Color(0xFFF59E0B),
+                          ),
+                          _resumo(
+                            'Concluídos',
+                            _contar('concluido').toString(),
+                            const Color(0xFF10B981),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _filtrosStatus(),
+                      const SizedBox(height: 12),
+                      _filtrosPrioridade(),
+                      const SizedBox(height: 24),
+                      if (_filtrados.isEmpty)
+                        _vazio()
+                      else
+                        Column(
+                          children: _filtrados
+                              .map(
+                                (item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _card(item),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
               ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _resumoGrid({required double width, required List<Widget> children}) {
+    final columns = AppResponsive.gridColumns(
+      width,
+      mobile: 1,
+      tablet: 3,
+      desktop: 3,
+    );
+    final availableWidth =
+        (AppResponsive.maxContentWidth(width)).clamp(0, width) -
+        AppResponsive.pagePadding(width).horizontal;
+    final itemWidth = AppResponsive.itemWidth(
+      availableWidth: availableWidth,
+      columns: columns,
+    );
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: children
+          .map((child) => SizedBox(width: itemWidth, child: child))
+          .toList(),
     );
   }
 
@@ -495,72 +530,62 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
   }
 
   Widget _filtrosStatus() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _chip(
-            'Todos',
-            _status == 'todos',
-            () => setState(() => _status = 'todos'),
-          ),
-          _espaco(),
-          _chip(
-            'Planejados',
-            _status == 'a_fazer',
-            () => setState(() => _status = 'a_fazer'),
-          ),
-          _espaco(),
-          _chip(
-            'Em andamento',
-            _status == 'em_andamento',
-            () => setState(() => _status = 'em_andamento'),
-          ),
-          _espaco(),
-          _chip(
-            'Concluídos',
-            _status == 'concluido',
-            () => setState(() => _status = 'concluido'),
-          ),
-        ],
-      ),
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _chip(
+          'Todos',
+          _status == 'todos',
+          () => setState(() => _status = 'todos'),
+        ),
+        _chip(
+          'Planejados',
+          _status == 'a_fazer',
+          () => setState(() => _status = 'a_fazer'),
+        ),
+        _chip(
+          'Em andamento',
+          _status == 'em_andamento',
+          () => setState(() => _status = 'em_andamento'),
+        ),
+        _chip(
+          'Concluídos',
+          _status == 'concluido',
+          () => setState(() => _status = 'concluido'),
+        ),
+      ],
     );
   }
 
   Widget _filtrosPrioridade() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _chip(
-            'Todas prioridades',
-            _prioridade == 'todas',
-            () => setState(() => _prioridade = 'todas'),
-          ),
-          _espaco(),
-          _chip(
-            'Alta',
-            _prioridade == 'alta',
-            () => setState(() => _prioridade = 'alta'),
-          ),
-          _espaco(),
-          _chip(
-            'Média',
-            _prioridade == 'media',
-            () => setState(() => _prioridade = 'media'),
-          ),
-          _espaco(),
-          _chip(
-            'Baixa',
-            _prioridade == 'baixa',
-            () => setState(() => _prioridade = 'baixa'),
-          ),
-        ],
-      ),
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _chip(
+          'Todas prioridades',
+          _prioridade == 'todas',
+          () => setState(() => _prioridade = 'todas'),
+        ),
+        _chip(
+          'Alta',
+          _prioridade == 'alta',
+          () => setState(() => _prioridade = 'alta'),
+        ),
+        _chip(
+          'Média',
+          _prioridade == 'media',
+          () => setState(() => _prioridade = 'media'),
+        ),
+        _chip(
+          'Baixa',
+          _prioridade == 'baixa',
+          () => setState(() => _prioridade = 'baixa'),
+        ),
+      ],
     );
   }
-
-  Widget _espaco() => const SizedBox(width: 10);
 
   Widget _chip(String label, bool ativo, VoidCallback onTap) {
     return GestureDetector(
@@ -626,7 +651,7 @@ class _TelaPlanejamentoState extends State<TelaPlanejamento> {
                   children: [
                     Expanded(
                       child: Text(
-                        item['titulo']?.toString() ?? 'Sem titulo',
+                        item['titulo']?.toString() ?? 'Sem título',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -964,7 +989,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
 
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate() || _data == null) {
-      _mensagem('Preencha todos os campos obrigatorios.');
+      _mensagem('Preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -1030,7 +1055,9 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
 
   @override
   Widget build(BuildContext context) {
-    final altura = MediaQuery.of(context).size.height * 0.76;
+    final size = MediaQuery.of(context).size;
+    final altura = size.height * AppResponsive.modalMaxHeightFactor(size.width);
+    final larguraMaxima = AppResponsive.modalMaxWidth(size.width);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
@@ -1040,7 +1067,10 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Container(
-            constraints: BoxConstraints(maxHeight: altura),
+            constraints: BoxConstraints(
+              maxHeight: altura,
+              maxWidth: larguraMaxima,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xFF0F1729),
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1090,9 +1120,9 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
               style: TextStyle(color: Colors.white.withValues(alpha: 0.65)),
             ),
             const SizedBox(height: 24),
-            _campoTexto(_titulo, 'Titulo', 1, (valor) {
+            _campoTexto(_titulo, 'Título', 1, (valor) {
               if (valor == null || valor.trim().isEmpty) {
-                return 'Digite um titulo';
+                return 'Digite um título';
               }
               return null;
             }, TextInputAction.next),
@@ -1282,7 +1312,7 @@ class _ModalPlanejamentoState extends State<_ModalPlanejamento> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Anexe uma imagem de referencia para esse planejamento.',
+            'Anexe uma imagem de referência para esse planejamento.',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.58),
               height: 1.35,
