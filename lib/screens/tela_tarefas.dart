@@ -210,23 +210,30 @@ class _TelaTarefasState extends State<TelaTarefas> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    _construirResumoGrid(
-                      width: width,
+                    Row(
                       children: [
-                        _construirResumo(
-                          titulo: 'A Fazer',
-                          valor: _contarPorStatus('a_fazer').toString(),
-                          cor: const Color(0xFF6366F1),
+                        Expanded(
+                          child: _construirResumo(
+                            titulo: 'A Fazer',
+                            valor: _contarPorStatus('a_fazer').toString(),
+                            cor: const Color(0xFF6366F1),
+                          ),
                         ),
-                        _construirResumo(
-                          titulo: 'Fazendo',
-                          valor: _contarPorStatus('fazendo').toString(),
-                          cor: const Color(0xFFF59E0B),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _construirResumo(
+                            titulo: 'Fazendo',
+                            valor: _contarPorStatus('fazendo').toString(),
+                            cor: const Color(0xFFF59E0B),
+                          ),
                         ),
-                        _construirResumo(
-                          titulo: 'Concluído',
-                          valor: _contarPorStatus('concluido').toString(),
-                          cor: const Color(0xFF10B981),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _construirResumo(
+                            titulo: 'Concluído',
+                            valor: _contarPorStatus('concluido').toString(),
+                            cor: const Color(0xFF10B981),
+                          ),
                         ),
                       ],
                     ),
@@ -318,30 +325,6 @@ class _TelaTarefasState extends State<TelaTarefas> {
           ),
         );
       },
-    );
-  }
-
-  Widget _construirResumoGrid({
-    required double width,
-    required List<Widget> children,
-  }) {
-    final columns = AppResponsive.gridColumns(
-      width,
-      mobile: 1,
-      tablet: 3,
-      desktop: 3,
-    );
-    final itemWidth = AppResponsive.itemWidth(
-      availableWidth: width - AppResponsive.pagePadding(width).horizontal,
-      columns: columns,
-    );
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: children
-          .map((child) => SizedBox(width: itemWidth, child: child))
-          .toList(),
     );
   }
 

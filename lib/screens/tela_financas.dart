@@ -557,36 +557,22 @@ class _TelaFinancasState extends State<TelaFinancas> {
                             ),
                           ),
                           const SizedBox(height: 22),
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                width: AppResponsive.isMobile(width)
-                                    ? double.infinity
-                                    : AppResponsive.itemWidth(
-                                        availableWidth:
-                                            width - padding.horizontal - 48,
-                                        columns: 2,
-                                        spacing: 16,
-                                      ),
+                              Expanded(
                                 child: _construirLinhaResumo(
                                   titulo: 'Receitas',
                                   valor: _formatarMoeda(widget.totalReceitas),
                                 ),
                               ),
-                              SizedBox(
-                                width: AppResponsive.isMobile(width)
-                                    ? double.infinity
-                                    : AppResponsive.itemWidth(
-                                        availableWidth:
-                                            width - padding.horizontal - 48,
-                                        columns: 2,
-                                        spacing: 16,
-                                      ),
+                              const SizedBox(width: 16),
+                              Expanded(
                                 child: _construirLinhaResumo(
                                   titulo: 'Despesas',
                                   valor: _formatarMoeda(widget.totalGastos),
+                                  alinhamento: CrossAxisAlignment.end,
                                 ),
                               ),
                             ],

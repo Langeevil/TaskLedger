@@ -47,7 +47,7 @@ class RelatorioService {
           'status',
           'em_andamento',
         ).toDouble(),
-        'Concluidas': _contarPorCampo(
+        'Concluídas': _contarPorCampo(
           tarefas,
           'status',
           'concluido',
