@@ -6,6 +6,7 @@ import '../services/dashboard_service.dart';
 import '../services/user_service.dart';
 import '../utils/responsive_utils.dart';
 
+import 'tela_configuracoes.dart';
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
 import 'tela_planejamento.dart';
@@ -519,6 +520,8 @@ class _TelaDashboardState extends State<TelaDashboard> {
           dadosUsuario: _dadosUsuario,
           onPerfilAtualizado: _atualizarDadosPerfil,
         );
+      case 6:
+        return const TelaConfiguracoes();
       default:
         return _construirTelaInicio();
     }
@@ -1285,28 +1288,10 @@ class _TelaDashboardState extends State<TelaDashboard> {
                   const SizedBox(height: 20),
                   const Divider(color: Color(0xFF6366F1), thickness: 0.5),
                   const SizedBox(height: 20),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.settings_outlined,
-                      color: Color(0xFF6366F1),
-                    ),
-                    title: const Text(
-                      'Configurações',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Funcionalidade em desenvolvimento'),
-                          backgroundColor: Color(0xFF6366F1),
-                        ),
-                      );
-                    },
+                  _construirItemDrawer(
+                    indice: 6,
+                    titulo: 'Configurações',
+                    icone: Icons.settings_outlined,
                   ),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Colors.red),
