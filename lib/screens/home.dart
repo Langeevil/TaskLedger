@@ -40,7 +40,7 @@ class HomePage extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: Image.asset(
-                            '../assets/images/logo.png',
+                            'assets/images/logo.png',
                             height: size.height * 0.25,
                             width: double.infinity,
                             fit: BoxFit.contain,
