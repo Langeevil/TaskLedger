@@ -43,6 +43,7 @@ dependencies:
   http: ^1.2.2
   fl_chart: ^1.2.0
   pdf: ^3.12.0
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,18 @@ flutter:
   assets:
    - assets/images/logo.png
   #   - images/a_dot_ham.jpeg
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/icone.png"
+
+
+flutter_icons:
+  image_path: "assets/images/icone.png"
+  ios: true
+  remove_alpha_ios: true
+  android: "launcher_icon"
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
