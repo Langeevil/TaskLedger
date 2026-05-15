@@ -77,7 +77,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
       setState(() {
         _cupomTask10Aplicado = true;
       });
-      _mostrarMensagem('Cupom TASK10 aplicado ao planejamento.');
+      _mostrarMensagem('Cupom TASK10 aplicado ao orçamento.');
       return;
     }
 
@@ -95,9 +95,9 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
 
     final transacao = TransacaoModel(
       uid: widget.uid,
-      titulo: 'Compras planejadas',
+      titulo: 'Orçamento de compras',
       tipo: 'despesa',
-      categoria: _categoriaDaDespesa(),
+      categoria: 'Compras',
       valor: _total,
       data: DateTime.now(),
       observacao: _observacaoDaDespesa(),
@@ -131,19 +131,6 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
     }
   }
 
-  String _categoriaDaDespesa() {
-    final categorias = widget.itens
-        .map((item) => item.produto.categoria.trim())
-        .where((categoria) => categoria.isNotEmpty)
-        .toSet();
-
-    if (categorias.length == 1) {
-      return categorias.first;
-    }
-
-    return 'Outros';
-  }
-
   String _observacaoDaDespesa() {
     final linhas = widget.itens
         .map((item) {
@@ -155,7 +142,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
         ? '\nDesconto aplicado: ${AppCurrencyUtils.format(_desconto)}'
         : '';
 
-    return 'Registrado a partir do carrinho de planejamento.\n$linhas$desconto';
+    return 'Registrado a partir do carrinho de orçamento.\n$linhas$desconto';
   }
 
   void _mostrarMensagem(String mensagem, {bool erro = false}) {
@@ -237,7 +224,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Carrinho de planejamento',
+                'Carrinho de Orçamento',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -563,7 +550,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Adicione itens ao planejamento para calcular o total previsto.',
+            'Adicione produtos ao carrinho para calcular o total previsto.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.62)),
           ),

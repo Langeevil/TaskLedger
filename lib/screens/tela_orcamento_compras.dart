@@ -4,15 +4,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../models/item_carrinho.dart';
-import '../models/produto_planejado.dart';
-import '../services/produto_planejado_service.dart';
+import '../models/produto_compra.dart';
+import '../services/produto_compra_service.dart';
 import '../utils/app_currency_utils.dart';
+import '../utils/categorias_financeiras.dart';
 import '../utils/responsive_utils.dart';
-import 'tela_cadastro_produto_planejado.dart';
+import 'tela_catalogo_produtos.dart';
 import 'tela_carrinho_compras.dart';
 
-class TelaComprasPlanejadas extends StatefulWidget {
-  const TelaComprasPlanejadas({
+class TelaOrcamentoCompras extends StatefulWidget {
+  const TelaOrcamentoCompras({
     super.key,
     required this.uid,
     required this.onDespesaRegistrada,
@@ -22,15 +23,19 @@ class TelaComprasPlanejadas extends StatefulWidget {
   final Future<void> Function() onDespesaRegistrada;
 
   @override
-  State<TelaComprasPlanejadas> createState() => _TelaComprasPlanejadasState();
+  State<TelaOrcamentoCompras> createState() => _TelaOrcamentoComprasState();
 }
 
-class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
-  final _service = ProdutoPlanejadoService();
+class _TelaOrcamentoComprasState extends State<TelaOrcamentoCompras> {
+  final _service = ProdutoCompraService();
   final _controladorBusca = TextEditingController();
   final List<ItemCarrinho> _itensCarrinho = [];
 
-  List<ProdutoPlanejado> _produtos = [];
+  List<ProdutoCompra> _produtos = [];
+  List<String> _categoriasCompartilhadas = [
+    'Todas',
+    ...CategoriasFinanceiras.padrao,
+  ];
   String _categoriaSelecionada = 'Todas';
   bool _carregando = true;
   String? _mensagemErro;
@@ -38,28 +43,27 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
   @override
   void initState() {
     super.initState();
+    CategoriasFinanceiras.versao.addListener(_aoCategoriasAtualizadas);
     _controladorBusca.addListener(() => setState(() {}));
     _carregarProdutos();
   }
 
   @override
   void dispose() {
+    CategoriasFinanceiras.versao.removeListener(_aoCategoriasAtualizadas);
     _controladorBusca.dispose();
     super.dispose();
   }
 
-  List<String> get _categorias {
-    final categorias =
-        _produtos
-            .map((produto) => produto.categoria.trim())
-            .where((categoria) => categoria.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    return ['Todas', ...categorias];
+  void _aoCategoriasAtualizadas() {
+    _carregarCategorias();
   }
 
-  List<ProdutoPlanejado> get _produtosFiltrados {
+  List<String> get _categorias {
+    return _categoriasCompartilhadas;
+  }
+
+  List<ProdutoCompra> get _produtosFiltrados {
     final busca = _controladorBusca.text.trim().toLowerCase();
 
     return _produtos.where((produto) {
@@ -87,12 +91,16 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
 
     try {
       final produtos = await _service.listarProdutos();
+      final categorias = await CategoriasFinanceiras.sincronizar(
+        produtos.map((produto) => produto.categoria),
+      );
       if (!mounted) {
         return;
       }
 
       setState(() {
         _produtos = produtos;
+        _categoriasCompartilhadas = ['Todas', ...categorias];
         _carregando = false;
         if (!_categorias.contains(_categoriaSelecionada)) {
           _categoriaSelecionada = 'Todas';
@@ -111,22 +119,34 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
     }
   }
 
-  Future<void> _abrirCadastroProduto() async {
-    final salvo = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => const TelaCadastroProdutoPlanejado(),
-      ),
-    );
+  Future<void> _carregarCategorias() async {
+    final categorias = await CategoriasFinanceiras.carregar();
+    if (!mounted) {
+      return;
+    }
 
-    if (salvo == true) {
+    setState(() {
+      _categoriasCompartilhadas = ['Todas', ...categorias];
+      if (!_categorias.contains(_categoriaSelecionada)) {
+        _categoriaSelecionada = 'Todas';
+      }
+    });
+  }
+
+  Future<void> _abrirCatalogoProdutos() async {
+    await Navigator.of(
+      context,
+    ).push<bool>(_rotaSuave(const TelaCatalogoProdutos()));
+
+    if (mounted) {
       await _carregarProdutos();
     }
   }
 
   Future<void> _abrirCarrinho() async {
     await Navigator.of(context).push<List<ItemCarrinho>>(
-      MaterialPageRoute(
-        builder: (context) => TelaCarrinhoCompras(
+      _rotaSuave(
+        TelaCarrinhoCompras(
           uid: widget.uid,
           itens: _itensCarrinho,
           onDespesaRegistrada: widget.onDespesaRegistrada,
@@ -139,7 +159,32 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
     }
   }
 
-  void _adicionarAoCarrinho(ProdutoPlanejado produto) {
+  PageRouteBuilder<T> _rotaSuave<T>(Widget tela) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 360),
+      reverseTransitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (_, _, _) => tela,
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.04, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  void _adicionarAoCarrinho(ProdutoCompra produto) {
     final itemExistente = _buscarItemCarrinho(produto);
 
     setState(() {
@@ -152,20 +197,20 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${produto.nome} adicionado ao planejamento.'),
+        content: Text('${produto.nome} adicionado ao carrinho.'),
         backgroundColor: const Color(0xFF6366F1),
       ),
     );
   }
 
-  bool _mesmoProduto(ProdutoPlanejado atual, ProdutoPlanejado novo) {
+  bool _mesmoProduto(ProdutoCompra atual, ProdutoCompra novo) {
     if (atual.id.isNotEmpty && novo.id.isNotEmpty) {
       return atual.id == novo.id;
     }
     return atual.nome == novo.nome && atual.categoria == novo.categoria;
   }
 
-  ItemCarrinho? _buscarItemCarrinho(ProdutoPlanejado produto) {
+  ItemCarrinho? _buscarItemCarrinho(ProdutoCompra produto) {
     for (final item in _itensCarrinho) {
       if (_mesmoProduto(item.produto, produto)) {
         return item;
@@ -204,6 +249,15 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
                       const SizedBox(height: 20),
                       _construirFiltros(width),
                       const SizedBox(height: 20),
+                      const Text(
+                        'Produtos disponíveis',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       _construirConteudo(width),
                       const SizedBox(height: 32),
                     ],
@@ -225,7 +279,7 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Compras Planejadas',
+                'Orçamento de Compras',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: AppResponsive.headingSize(width),
@@ -245,9 +299,9 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
         ),
         const SizedBox(width: 12),
         _construirBotaoIcone(
-          icone: Icons.add,
-          onTap: _abrirCadastroProduto,
-          tooltip: 'Registrar previsão de compra',
+          icone: Icons.inventory_2_outlined,
+          onTap: _abrirCatalogoProdutos,
+          tooltip: 'Gerenciar Produtos',
         ),
         const SizedBox(width: 10),
         _construirBotaoCarrinho(),
@@ -282,7 +336,7 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
 
   Widget _construirBotaoCarrinho() {
     return Tooltip(
-      message: 'Abrir carrinho de planejamento',
+      message: 'Abrir carrinho de orçamento',
       child: InkWell(
         onTap: _abrirCarrinho,
         borderRadius: BorderRadius.circular(14),
@@ -362,7 +416,7 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
         children: [
           Expanded(
             child: _construirResumoItem(
-              titulo: 'Itens planejados',
+              titulo: 'Itens no carrinho',
               valor: '$_quantidadeCarrinho',
             ),
           ),
@@ -532,13 +586,12 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
     if (produtos.isEmpty) {
       return _construirEstadoInformativo(
         icone: Icons.shopping_bag_outlined,
-        titulo: 'Nenhum produto planejado encontrado',
-        mensagem:
-            'Cadastre itens que pretende comprar para prever despesas futuras.',
+        titulo: 'Nenhum produto encontrado',
+        mensagem: 'Cadastre produtos no catálogo para montar seu orçamento.',
         acao: FilledButton.icon(
-          onPressed: _abrirCadastroProduto,
+          onPressed: _abrirCatalogoProdutos,
           icon: const Icon(Icons.add),
-          label: const Text('Registrar previsão'),
+          label: const Text('Gerenciar Produtos'),
         ),
       );
     }
@@ -573,7 +626,7 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
     );
   }
 
-  Widget _construirCardProduto(ProdutoPlanejado produto) {
+  Widget _construirCardProduto(ProdutoCompra produto) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1A1F3A).withValues(alpha: 0.78),
@@ -636,7 +689,7 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
                       foregroundColor: Colors.white,
                     ),
                     icon: const Icon(Icons.add_shopping_cart, size: 18),
-                    label: const Text('Adicionar ao planejamento'),
+                    label: const Text('Adicionar ao carrinho'),
                   ),
                 ),
               ],
@@ -647,7 +700,7 @@ class _TelaComprasPlanejadasState extends State<TelaComprasPlanejadas> {
     );
   }
 
-  Widget _construirImagemProduto(ProdutoPlanejado produto) {
+  Widget _construirImagemProduto(ProdutoCompra produto) {
     final imagem = produto.imagem?.trim();
 
     return ClipRRect(

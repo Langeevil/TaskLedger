@@ -3,15 +3,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/mockapi_config.dart';
-import '../models/produto_planejado.dart';
+import '../models/produto_compra.dart';
 
-class ProdutoPlanejadoService {
-  ProdutoPlanejadoService({http.Client? client})
+class ProdutoCompraService {
+  ProdutoCompraService({http.Client? client})
     : _client = client ?? http.Client();
 
   final http.Client _client;
 
-  Future<List<ProdutoPlanejado>> listarProdutos() async {
+  Future<List<ProdutoCompra>> listarProdutos() async {
     final response = await _client.get(_baseUri);
 
     if (response.statusCode == 200) {
@@ -19,21 +19,21 @@ class ProdutoPlanejadoService {
       if (decoded is List) {
         return decoded
             .whereType<Map<String, dynamic>>()
-            .map(ProdutoPlanejado.fromJson)
+            .map(ProdutoCompra.fromJson)
             .toList();
       }
-      throw const ProdutoPlanejadoServiceException(
+      throw const ProdutoCompraServiceException(
         'A resposta da API não está no formato esperado.',
       );
     }
 
-    throw ProdutoPlanejadoServiceException(
-      'Não foi possível carregar os produtos planejados.',
+    throw ProdutoCompraServiceException(
+      'Não foi possível carregar os produtos.',
       statusCode: response.statusCode,
     );
   }
 
-  Future<ProdutoPlanejado> cadastrarProduto(ProdutoPlanejado produto) async {
+  Future<ProdutoCompra> cadastrarProduto(ProdutoCompra produto) async {
     final response = await _client.post(
       _baseUri,
       headers: const {'Content-Type': 'application/json'},
@@ -43,22 +43,22 @@ class ProdutoPlanejadoService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
-        return ProdutoPlanejado.fromJson(decoded);
+        return ProdutoCompra.fromJson(decoded);
       }
-      throw const ProdutoPlanejadoServiceException(
+      throw const ProdutoCompraServiceException(
         'A resposta da API não está no formato esperado.',
       );
     }
 
-    throw ProdutoPlanejadoServiceException(
-      'Não foi possível cadastrar o produto planejado.',
+    throw ProdutoCompraServiceException(
+      'Não foi possível cadastrar o produto.',
       statusCode: response.statusCode,
     );
   }
 
-  Future<void> atualizarProduto(ProdutoPlanejado produto) async {
+  Future<ProdutoCompra> editarProduto(ProdutoCompra produto) async {
     if (produto.id.isEmpty) {
-      throw const ProdutoPlanejadoServiceException(
+      throw const ProdutoCompraServiceException(
         'Produto sem identificador para atualização.',
       );
     }
@@ -69,25 +69,33 @@ class ProdutoPlanejadoService {
       body: jsonEncode(produto.toJson()),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ProdutoPlanejadoServiceException(
-        'Não foi possível atualizar o produto planejado.',
-        statusCode: response.statusCode,
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return ProdutoCompra.fromJson(decoded);
+      }
+      throw const ProdutoCompraServiceException(
+        'A resposta da API não está no formato esperado.',
       );
     }
+
+    throw ProdutoCompraServiceException(
+      'Não foi possível atualizar o produto.',
+      statusCode: response.statusCode,
+    );
   }
 
   Future<void> excluirProduto(String id) async {
     if (id.trim().isEmpty) {
-      throw const ProdutoPlanejadoServiceException(
+      throw const ProdutoCompraServiceException(
         'Produto sem identificador para exclusão.',
       );
     }
 
     final response = await _client.delete(_uriComId(id));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ProdutoPlanejadoServiceException(
-        'Não foi possível excluir o produto planejado.',
+      throw ProdutoCompraServiceException(
+        'Não foi possível excluir o produto.',
         statusCode: response.statusCode,
       );
     }
@@ -102,7 +110,7 @@ class ProdutoPlanejadoService {
         uri == null ||
         !uri.hasScheme ||
         uri.host.isEmpty) {
-      throw const ProdutoPlanejadoServiceException(
+      throw const ProdutoCompraServiceException(
         'Configure o endpoint do MockAPI.io em lib/config/mockapi_config.dart.',
       );
     }
@@ -116,8 +124,8 @@ class ProdutoPlanejadoService {
   }
 }
 
-class ProdutoPlanejadoServiceException implements Exception {
-  const ProdutoPlanejadoServiceException(this.message, {this.statusCode});
+class ProdutoCompraServiceException implements Exception {
+  const ProdutoCompraServiceException(this.message, {this.statusCode});
 
   final String message;
   final int? statusCode;

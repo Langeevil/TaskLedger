@@ -1,9 +1,9 @@
-import 'produto_planejado.dart';
+import 'produto_compra.dart';
 
 class ItemCarrinho {
   ItemCarrinho({required this.produto, this.quantidade = 1});
 
-  final ProdutoPlanejado produto;
+  final ProdutoCompra produto;
   int quantidade;
 
   double get subtotal => produto.preco * quantidade;

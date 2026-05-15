@@ -1,5 +1,5 @@
-class ProdutoPlanejado {
-  const ProdutoPlanejado({
+class ProdutoCompra {
+  const ProdutoCompra({
     this.id = '',
     required this.nome,
     required this.descricao,
@@ -17,8 +17,8 @@ class ProdutoPlanejado {
   final String? imagem;
   final String? criadoEm;
 
-  factory ProdutoPlanejado.fromJson(Map<String, dynamic> json) {
-    return ProdutoPlanejado(
+  factory ProdutoCompra.fromJson(Map<String, dynamic> json) {
+    return ProdutoCompra(
       id: json['id']?.toString() ?? '',
       nome: json['nome']?.toString() ?? '',
       descricao: json['descricao']?.toString() ?? '',

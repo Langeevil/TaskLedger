@@ -1,18 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CategoriasFinanceiras {
   const CategoriasFinanceiras._();
 
   static const _storageKey = 'categorias_financeiras_customizadas';
+  static final ValueNotifier<int> versao = ValueNotifier<int>(0);
 
   static const List<String> padrao = [
-    'Salario',
+    'Salário',
     'Freela',
-    'Alimentacao',
+    'Alimentação',
     'Transporte',
     'Moradia',
-    'Saude',
+    'Saúde',
     'Lazer',
+    'Compras',
     'Outros',
   ];
 
@@ -28,18 +31,41 @@ class CategoriasFinanceiras {
       return carregar();
     }
 
+    return sincronizar([categoriaNormalizada]);
+  }
+
+  static bool equivalente(String primeira, String segunda) {
+    return _chaveComparacao(primeira) == _chaveComparacao(segunda);
+  }
+
+  static bool contem(List<String> categorias, String categoria) {
+    return categorias.any((item) => equivalente(item, categoria));
+  }
+
+  static String resolver(List<String> categorias, String categoria) {
+    return categorias.firstWhere(
+      (item) => equivalente(item, categoria),
+      orElse: () => categoria.trim(),
+    );
+  }
+
+  static Future<List<String>> sincronizar(Iterable<String> categorias) async {
     final prefs = await SharedPreferences.getInstance();
     final atuais = prefs.getStringList(_storageKey) ?? const <String>[];
-    final todas = _ordenarUnicas([...padrao, ...atuais, categoriaNormalizada]);
+    final novas = categorias
+        .map((categoria) => categoria.trim())
+        .where((categoria) => categoria.isNotEmpty);
+    final todas = _ordenarUnicas([...padrao, ...atuais, ...novas]);
     final customizadas = todas
         .where(
           (categoria) => !padrao.any(
-            (padrao) => padrao.toLowerCase() == categoria.toLowerCase(),
+            (padrao) => _chaveComparacao(padrao) == _chaveComparacao(categoria),
           ),
         )
         .toList();
 
     await prefs.setStringList(_storageKey, customizadas);
+    versao.value++;
     return todas;
   }
 
@@ -50,7 +76,7 @@ class CategoriasFinanceiras {
       if (texto.isEmpty) {
         continue;
       }
-      mapa.putIfAbsent(texto.toLowerCase(), () => texto);
+      mapa.putIfAbsent(_chaveComparacao(texto), () => texto);
     }
 
     final resultado = mapa.values.toList();
@@ -60,5 +86,17 @@ class CategoriasFinanceiras {
       return a.toLowerCase().compareTo(b.toLowerCase());
     });
     return resultado;
+  }
+
+  static String _chaveComparacao(String texto) {
+    return texto
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp('[áàãâä]'), 'a')
+        .replaceAll(RegExp('[éèêë]'), 'e')
+        .replaceAll(RegExp('[íìîï]'), 'i')
+        .replaceAll(RegExp('[óòõôö]'), 'o')
+        .replaceAll(RegExp('[úùûü]'), 'u')
+        .replaceAll('ç', 'c');
   }
 }

@@ -993,12 +993,13 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
   @override
   void initState() {
     super.initState();
+    CategoriasFinanceiras.versao.addListener(_aoCategoriasAtualizadas);
     _controladorTitulo.text = widget.transacao?['titulo']?.toString() ?? '';
     _controladorObservacao.text =
         widget.transacao?['observacao']?.toString() ?? '';
     _tipo = widget.transacao?['tipo']?.toString() ?? 'despesa';
     _categoria = widget.transacao?['categoria']?.toString() ?? 'Outros';
-    if (!_categorias.contains(_categoria)) {
+    if (!CategoriasFinanceiras.contem(_categorias, _categoria)) {
       _categorias.add(_categoria);
       _categorias.sort();
     }
@@ -1015,14 +1016,21 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
   }
 
   Future<void> _carregarCategorias() async {
-    final categorias = await CategoriasFinanceiras.carregar();
+    var categorias = await CategoriasFinanceiras.carregar();
+    if (_categoria.trim().isNotEmpty &&
+        !CategoriasFinanceiras.contem(categorias, _categoria)) {
+      categorias = await CategoriasFinanceiras.sincronizar([_categoria]);
+    }
+    if (_categoria.trim().isNotEmpty) {
+      _categoria = CategoriasFinanceiras.resolver(categorias, _categoria);
+    }
     if (!mounted) {
       return;
     }
 
     setState(() {
       _categorias = categorias;
-      if (!_categorias.contains(_categoria)) {
+      if (!CategoriasFinanceiras.contem(_categorias, _categoria)) {
         _categorias = [..._categorias, _categoria]..sort();
       }
     });
@@ -1030,11 +1038,16 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
 
   @override
   void dispose() {
+    CategoriasFinanceiras.versao.removeListener(_aoCategoriasAtualizadas);
     _controladorTitulo.dispose();
     _controladorValor.dispose();
     _controladorObservacao.dispose();
     _controladorNovaCategoria.dispose();
     super.dispose();
+  }
+
+  void _aoCategoriasAtualizadas() {
+    _carregarCategorias();
   }
 
   String _formatarValorInicial(dynamic valor) {
@@ -1363,7 +1376,7 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
     }
 
     final categoriaSalva = categorias.firstWhere(
-      (item) => item.toLowerCase() == categoria.trim().toLowerCase(),
+      (item) => CategoriasFinanceiras.equivalente(item, categoria),
       orElse: () => categoria.trim(),
     );
 

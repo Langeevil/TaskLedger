@@ -6,7 +6,7 @@ import '../services/dashboard_service.dart';
 import '../services/user_service.dart';
 import '../utils/responsive_utils.dart';
 
-import 'tela_compras_planejadas.dart';
+import 'tela_orcamento_compras.dart';
 import 'tela_configuracoes.dart';
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
@@ -524,7 +524,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
       case 6:
         return const TelaConfiguracoes();
       case 7:
-        return TelaComprasPlanejadas(
+        return TelaOrcamentoCompras(
           uid: _usuarioAtual.uid,
           onDespesaRegistrada: _carregarDados,
         );
@@ -1271,20 +1271,11 @@ class _TelaDashboardState extends State<TelaDashboard> {
                     titulo: 'Tarefas',
                     icone: Icons.task_alt,
                   ),
-                  _construirItemDrawer(
-                    indice: 2,
-                    titulo: 'Finanças',
-                    icone: Icons.attach_money,
-                  ),
+                  _construirMenuFinancas(),
                   _construirItemDrawer(
                     indice: 3,
                     titulo: 'Planejamento',
                     icone: Icons.event_note_outlined,
-                  ),
-                  _construirItemDrawer(
-                    indice: 7,
-                    titulo: 'Compras Planejadas',
-                    icone: Icons.shopping_bag_outlined,
                   ),
                   _construirItemDrawer(
                     indice: 4,
@@ -1367,6 +1358,88 @@ class _TelaDashboardState extends State<TelaDashboard> {
           Navigator.pop(context);
         },
       ),
+    );
+  }
+
+  Widget _construirMenuFinancas() {
+    final ativo = _indiceTelaAtual == 2 || _indiceTelaAtual == 7;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: ativo
+          ? BoxDecoration(
+              color: const Color(0xFF6366F1).withOpacity(0.22),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFF6366F1).withOpacity(0.42),
+              ),
+            )
+          : null,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: ativo,
+          collapsedIconColor: Colors.white.withOpacity(0.6),
+          iconColor: const Color(0xFF6366F1),
+          leading: Icon(
+            Icons.attach_money,
+            color: ativo
+                ? const Color(0xFF6366F1)
+                : Colors.white.withOpacity(0.6),
+          ),
+          title: Text(
+            'Finanças',
+            style: TextStyle(
+              color: ativo ? Colors.white : Colors.white.withOpacity(0.6),
+              fontSize: 14,
+              fontWeight: ativo ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+          children: [
+            _construirSubItemDrawer(
+              indice: 2,
+              titulo: 'Controle Financeiro',
+              icone: Icons.account_balance_wallet_outlined,
+            ),
+            _construirSubItemDrawer(
+              indice: 7,
+              titulo: 'Orçamento de Compras',
+              icone: Icons.shopping_cart_outlined,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirSubItemDrawer({
+    required int indice,
+    required String titulo,
+    required IconData icone,
+  }) {
+    final ativo = _indiceTelaAtual == indice;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.only(left: 48, right: 16),
+      leading: Icon(
+        icone,
+        size: 20,
+        color: ativo ? const Color(0xFF6366F1) : Colors.white.withOpacity(0.55),
+      ),
+      title: Text(
+        titulo,
+        style: TextStyle(
+          color: ativo ? Colors.white : Colors.white.withOpacity(0.62),
+          fontSize: 13,
+          fontWeight: ativo ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+      onTap: () {
+        setState(() {
+          _indiceTelaAtual = indice;
+        });
+        Navigator.pop(context);
+      },
     );
   }
 }

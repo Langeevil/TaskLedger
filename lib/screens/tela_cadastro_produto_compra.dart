@@ -4,24 +4,25 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../models/produto_planejado.dart';
+import '../models/produto_compra.dart';
 import '../services/imgbb_service.dart';
-import '../services/produto_planejado_service.dart';
+import '../services/produto_compra_service.dart';
 import '../utils/categorias_financeiras.dart';
 import '../utils/responsive_utils.dart';
 
-class TelaCadastroProdutoPlanejado extends StatefulWidget {
-  const TelaCadastroProdutoPlanejado({super.key});
+class TelaCadastroProdutoCompra extends StatefulWidget {
+  const TelaCadastroProdutoCompra({super.key, this.produto});
+
+  final ProdutoCompra? produto;
 
   @override
-  State<TelaCadastroProdutoPlanejado> createState() =>
-      _TelaCadastroProdutoPlanejadoState();
+  State<TelaCadastroProdutoCompra> createState() =>
+      _TelaCadastroProdutoCompraState();
 }
 
-class _TelaCadastroProdutoPlanejadoState
-    extends State<TelaCadastroProdutoPlanejado> {
+class _TelaCadastroProdutoCompraState extends State<TelaCadastroProdutoCompra> {
   final _formKey = GlobalKey<FormState>();
-  final _service = ProdutoPlanejadoService();
+  final _service = ProdutoCompraService();
   final _imgbbService = ImgbbService();
   final _imagePicker = ImagePicker();
   final _controladorNome = TextEditingController();
@@ -34,23 +35,50 @@ class _TelaCadastroProdutoPlanejadoState
   List<String> _categorias = [...CategoriasFinanceiras.padrao];
   String _categoriaSelecionada = 'Outros';
   bool _salvando = false;
+  bool _salvo = false;
+  bool _categoriaAnimando = false;
+
+  bool get _editando => widget.produto != null;
 
   String get _categoriaFinal => _categoriaSelecionada;
 
   @override
   void initState() {
     super.initState();
+    CategoriasFinanceiras.versao.addListener(_aoCategoriasAtualizadas);
+    final produto = widget.produto;
+    if (produto != null) {
+      _controladorNome.text = produto.nome;
+      _controladorDescricao.text = produto.descricao;
+      _controladorPreco.text = _formatarPrecoInicial(produto.preco);
+      _controladorImagem.text = produto.imagem ?? '';
+      _categoriaSelecionada = produto.categoria.isEmpty
+          ? 'Outros'
+          : produto.categoria;
+    }
     _carregarCategorias();
   }
 
   @override
   void dispose() {
+    CategoriasFinanceiras.versao.removeListener(_aoCategoriasAtualizadas);
     _controladorNome.dispose();
     _controladorDescricao.dispose();
     _controladorCategoria.dispose();
     _controladorPreco.dispose();
     _controladorImagem.dispose();
     super.dispose();
+  }
+
+  void _aoCategoriasAtualizadas() {
+    _carregarCategorias();
+  }
+
+  String _formatarPrecoInicial(double preco) {
+    if (preco <= 0) {
+      return '';
+    }
+    return preco.toStringAsFixed(2).replaceAll('.', ',');
   }
 
   double _parsePreco() {
@@ -71,17 +99,33 @@ class _TelaCadastroProdutoPlanejadoState
   }
 
   Future<void> _carregarCategorias() async {
-    final categorias = await CategoriasFinanceiras.carregar();
+    var categorias = await CategoriasFinanceiras.carregar();
+    if (_categoriaSelecionada.trim().isNotEmpty &&
+        !CategoriasFinanceiras.contem(categorias, _categoriaSelecionada)) {
+      categorias = await CategoriasFinanceiras.sincronizar([
+        _categoriaSelecionada,
+      ]);
+    }
+    if (_categoriaSelecionada.trim().isNotEmpty) {
+      _categoriaSelecionada = CategoriasFinanceiras.resolver(
+        categorias,
+        _categoriaSelecionada,
+      );
+    }
     if (!mounted) {
       return;
     }
 
     setState(() {
       _categorias = categorias;
-      if (!_categorias.contains(_categoriaSelecionada)) {
-        _categoriaSelecionada = _categorias.isNotEmpty
-            ? _categorias.first
-            : 'Outros';
+      if (!CategoriasFinanceiras.contem(_categorias, _categoriaSelecionada)) {
+        if (_categoriaSelecionada.trim().isNotEmpty) {
+          _categorias = [..._categorias, _categoriaSelecionada]..sort();
+        } else {
+          _categoriaSelecionada = _categorias.isNotEmpty
+              ? _categorias.first
+              : 'Outros';
+        }
       }
     });
   }
@@ -154,14 +198,20 @@ class _TelaCadastroProdutoPlanejadoState
     }
 
     final categoriaSalva = categorias.firstWhere(
-      (item) => item.toLowerCase() == categoria.trim().toLowerCase(),
+      (item) => CategoriasFinanceiras.equivalente(item, categoria),
       orElse: () => categoria.trim(),
     );
 
     setState(() {
       _categorias = categorias;
       _categoriaSelecionada = categoriaSalva;
+      _categoriaAnimando = true;
     });
+
+    await Future.delayed(const Duration(milliseconds: 650));
+    if (mounted) {
+      setState(() => _categoriaAnimando = false);
+    }
   }
 
   Uint8List? _imagemSelecionadaBytes() {
@@ -223,28 +273,35 @@ class _TelaCadastroProdutoPlanejadoState
           ? await _imgbbService.uploadBase64(_imagemBase64!)
           : _controladorImagem.text.trim();
 
-      final produto = ProdutoPlanejado(
+      final produto = ProdutoCompra(
+        id: widget.produto?.id ?? '',
         nome: _controladorNome.text.trim(),
         descricao: _controladorDescricao.text.trim(),
         categoria: _categoriaFinal,
         preco: _parsePreco(),
         imagem: imagemUrl.isEmpty ? null : imagemUrl,
-        criadoEm: DateTime.now().toIso8601String(),
+        criadoEm: widget.produto?.criadoEm ?? DateTime.now().toIso8601String(),
       );
 
-      await _service.cadastrarProduto(produto);
+      if (_editando) {
+        await _service.editarProduto(produto);
+      } else {
+        await _service.cadastrarProduto(produto);
+      }
 
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Previsão de compra cadastrada com sucesso.'),
-          backgroundColor: Color(0xFF6366F1),
-        ),
-      );
-      Navigator.of(context).pop(true);
+      setState(() {
+        _salvando = false;
+        _salvo = true;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
     } catch (erro) {
       if (!mounted) {
         return;
@@ -285,6 +342,9 @@ class _TelaCadastroProdutoPlanejadoState
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final padding = AppResponsive.pagePadding(width);
+              final pagePadding = padding.add(
+                EdgeInsets.only(top: AppResponsive.isMobile(width) ? 16 : 24),
+              );
               final contentWidth = AppResponsive.modalMaxWidth(width);
 
               return SingleChildScrollView(
@@ -293,17 +353,37 @@ class _TelaCadastroProdutoPlanejadoState
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: contentWidth),
                     child: Padding(
-                      padding: padding,
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _construirCabecalho(),
-                            const SizedBox(height: 24),
-                            _construirCardFormulario(),
-                          ],
-                        ),
+                      padding: pagePadding,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 360),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.03),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _salvo
+                            ? _construirSucesso()
+                            : Form(
+                                key: _formKey,
+                                child: Column(
+                                  key: const ValueKey('formulario_produto'),
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _construirCabecalho(),
+                                    const SizedBox(height: 24),
+                                    _construirCardFormulario(),
+                                  ],
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -319,30 +399,25 @@ class _TelaCadastroProdutoPlanejadoState
   Widget _construirCabecalho() {
     return Row(
       children: [
-        IconButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          style: IconButton.styleFrom(
-            backgroundColor: const Color(0xFF1A1F3A),
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(Icons.arrow_back),
-        ),
+        _botaoVoltar(),
         const SizedBox(width: 14),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Registrar previsão de compra',
-                style: TextStyle(
+                _editando ? 'Editar produto' : 'Cadastrar produto',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'Cadastre itens para planejar gastos futuros.',
+                _editando
+                    ? 'Atualize os dados do produto do catálogo.'
+                    : 'Cadastre produtos para montar orçamentos de compra.',
                 style: TextStyle(color: Colors.white70),
               ),
             ],
@@ -352,22 +427,55 @@ class _TelaCadastroProdutoPlanejadoState
     );
   }
 
+  Widget _botaoVoltar() {
+    return InkWell(
+      onTap: () => Navigator.of(context).pop(false),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+          ),
+        ),
+        child: const Icon(Icons.arrow_back, color: Color(0xFF6366F1)),
+      ),
+    );
+  }
+
   Widget _construirCardFormulario() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1F3A).withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1A1F3A).withValues(alpha: 0.96),
+            const Color(0xFF11182E).withValues(alpha: 0.92),
+          ],
         ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: const Color(0xFF6366F1).withValues(alpha: 0.24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 28,
+            offset: const Offset(0, 18),
+          ),
+        ],
       ),
       child: Column(
         children: [
           _construirCampoTexto(
             controlador: _controladorNome,
-            label: 'Nome do item',
+            label: 'Nome do produto',
             icone: Icons.shopping_bag_outlined,
             textInputAction: TextInputAction.next,
             validador: (valor) {
@@ -441,7 +549,7 @@ class _TelaCadastroProdutoPlanejadoState
                         ),
                       )
                     : const Icon(Icons.save_outlined),
-                label: Text(_salvando ? 'Salvando...' : 'Salvar previsão'),
+                label: Text(_salvando ? 'Salvando...' : 'Salvar produto'),
               ),
             ),
           ),
@@ -497,8 +605,13 @@ class _TelaCadastroProdutoPlanejadoState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<String>(
-          initialValue: _categorias.contains(_categoriaSelecionada)
-              ? _categoriaSelecionada
+          key: ValueKey(_categoriaSelecionada),
+          initialValue:
+              CategoriasFinanceiras.contem(_categorias, _categoriaSelecionada)
+              ? CategoriasFinanceiras.resolver(
+                  _categorias,
+                  _categoriaSelecionada,
+                )
               : null,
           dropdownColor: const Color(0xFF1A1F3A),
           style: const TextStyle(color: Colors.white),
@@ -557,16 +670,51 @@ class _TelaCadastroProdutoPlanejadoState
         const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerLeft,
-          child: OutlinedButton.icon(
-            onPressed: _salvando ? null : _abrirDialogNovaCategoria,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: BorderSide(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.45),
+          child: AnimatedScale(
+            scale: _categoriaAnimando ? 1.04 : 1,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutBack,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: _categoriaAnimando
+                    ? [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF10B981,
+                          ).withValues(alpha: 0.32),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: OutlinedButton.icon(
+                onPressed: _salvando ? null : _abrirDialogNovaCategoria,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _categoriaAnimando
+                      ? const Color(0xFF6EE7B7)
+                      : Colors.white,
+                  side: BorderSide(
+                    color:
+                        (_categoriaAnimando
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFF6366F1))
+                            .withValues(alpha: 0.55),
+                  ),
+                ),
+                icon: Icon(
+                  _categoriaAnimando ? Icons.check_rounded : Icons.add,
+                  size: 18,
+                ),
+                label: Text(
+                  _categoriaAnimando
+                      ? 'Categoria adicionada'
+                      : 'Nova categoria',
+                ),
               ),
             ),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Nova categoria'),
           ),
         ),
       ],
@@ -676,6 +824,57 @@ class _TelaCadastroProdutoPlanejadoState
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _construirSucesso() {
+    return SizedBox(
+      key: const ValueKey('sucesso_produto'),
+      height: MediaQuery.of(context).size.height * 0.72,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10B981), Color(0xFF34D399)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 46,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _editando ? 'Produto atualizado' : 'Produto cadastrado',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'O catálogo foi atualizado com sucesso.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            ),
+          ],
+        ),
       ),
     );
   }
