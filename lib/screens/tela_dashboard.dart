@@ -6,6 +6,7 @@ import '../services/dashboard_service.dart';
 import '../services/user_service.dart';
 import '../utils/responsive_utils.dart';
 
+import 'tela_compras_planejadas.dart';
 import 'tela_configuracoes.dart';
 import 'tela_financas.dart';
 import 'tela_perfil.dart';
@@ -522,6 +523,11 @@ class _TelaDashboardState extends State<TelaDashboard> {
         );
       case 6:
         return const TelaConfiguracoes();
+      case 7:
+        return TelaComprasPlanejadas(
+          uid: _usuarioAtual.uid,
+          onDespesaRegistrada: _carregarDados,
+        );
       default:
         return _construirTelaInicio();
     }
@@ -1274,6 +1280,11 @@ class _TelaDashboardState extends State<TelaDashboard> {
                     indice: 3,
                     titulo: 'Planejamento',
                     icone: Icons.event_note_outlined,
+                  ),
+                  _construirItemDrawer(
+                    indice: 7,
+                    titulo: 'Compras Planejadas',
+                    icone: Icons.shopping_bag_outlined,
                   ),
                   _construirItemDrawer(
                     indice: 4,

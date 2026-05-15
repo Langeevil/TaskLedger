@@ -11,6 +11,7 @@ import '../models/transacao_model.dart';
 import '../services/transacao_service.dart';
 import '../utils/app_currency_utils.dart';
 import '../utils/app_date_utils.dart';
+import '../utils/categorias_financeiras.dart';
 import '../utils/responsive_utils.dart';
 
 class TelaFinancas extends StatefulWidget {
@@ -977,16 +978,8 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
   final _controladorValor = TextEditingController();
   final _controladorObservacao = TextEditingController();
 
-  final List<String> _categorias = const [
-    'Salario',
-    'Freela',
-    'Alimentacao',
-    'Transporte',
-    'Moradia',
-    'Saude',
-    'Lazer',
-    'Outros',
-  ];
+  List<String> _categorias = [...CategoriasFinanceiras.padrao];
+  final _controladorNovaCategoria = TextEditingController();
 
   String _tipo = 'despesa';
   String _categoria = 'Outros';
@@ -1005,6 +998,11 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
         widget.transacao?['observacao']?.toString() ?? '';
     _tipo = widget.transacao?['tipo']?.toString() ?? 'despesa';
     _categoria = widget.transacao?['categoria']?.toString() ?? 'Outros';
+    if (!_categorias.contains(_categoria)) {
+      _categorias.add(_categoria);
+      _categorias.sort();
+    }
+    _carregarCategorias();
     _comprovanteBase64 = widget.transacao?['comprovanteBase64']?.toString();
     _controladorValor.text = _formatarValorInicial(widget.transacao?['valor']);
 
@@ -1016,11 +1014,26 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
     }
   }
 
+  Future<void> _carregarCategorias() async {
+    final categorias = await CategoriasFinanceiras.carregar();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _categorias = categorias;
+      if (!_categorias.contains(_categoria)) {
+        _categorias = [..._categorias, _categoria]..sort();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _controladorTitulo.dispose();
     _controladorValor.dispose();
     _controladorObservacao.dispose();
+    _controladorNovaCategoria.dispose();
     super.dispose();
   }
 
@@ -1282,6 +1295,84 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
     );
   }
 
+  Future<void> _abrirDialogNovaCategoria() async {
+    _controladorNovaCategoria.clear();
+
+    final categoria = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF11182E),
+          title: const Text(
+            'Nova categoria',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: _controladorNovaCategoria,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Nome da categoria',
+              labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+              filled: true,
+              fillColor: const Color(0xFF1A1F3A).withOpacity(0.75),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: const Color(0xFF6366F1).withOpacity(0.25),
+                ),
+              ),
+            ),
+            onSubmitted: (_) {
+              Navigator.pop(context, _controladorNovaCategoria.text.trim());
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, _controladorNovaCategoria.text.trim());
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+              ),
+              child: const Text('Adicionar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (categoria == null || categoria.trim().isEmpty) {
+      return;
+    }
+
+    final categorias = await CategoriasFinanceiras.adicionar(categoria);
+    if (!mounted) {
+      return;
+    }
+
+    final categoriaSalva = categorias.firstWhere(
+      (item) => item.toLowerCase() == categoria.trim().toLowerCase(),
+      orElse: () => categoria.trim(),
+    );
+
+    setState(() {
+      _categorias = categorias;
+      _categoria = categoriaSalva;
+    });
+  }
+
   String _formatarData(DateTime data) {
     final dia = data.day.toString().padLeft(2, '0');
     final mes = data.month.toString().padLeft(2, '0');
@@ -1384,6 +1475,21 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
                 for (final categoria in _categorias) categoria: categoria,
               },
               onChanged: (valor) => setState(() => _categoria = valor!),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _salvando ? null : _abrirDialogNovaCategoria,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(
+                    color: const Color(0xFF6366F1).withOpacity(0.45),
+                  ),
+                ),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Nova categoria'),
+              ),
             ),
             const SizedBox(height: 16),
             _construirCampoTexto(
