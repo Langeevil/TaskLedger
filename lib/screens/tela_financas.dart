@@ -1489,19 +1489,38 @@ class _ModalLancamentoState extends State<_ModalLancamento> {
               },
               onChanged: (valor) => setState(() => _categoria = valor!),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _salvando ? null : _abrirDialogNovaCategoria,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(
-                    color: const Color(0xFF6366F1).withOpacity(0.45),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF312E81), Color(0xFF4338CA)],
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: FilledButton.icon(
+                  onPressed: _salvando ? null : _abrirDialogNovaCategoria,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    disabledBackgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 13,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text(
+                    'Nova categoria',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Nova categoria'),
               ),
             ),
             const SizedBox(height: 16),

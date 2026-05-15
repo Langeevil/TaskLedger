@@ -27,6 +27,8 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
   final _controladorCupom = TextEditingController();
   bool _cupomTask10Aplicado = false;
   bool _registrandoDespesa = false;
+  bool _carrinhoSaindo = false;
+  bool _registroConcluido = false;
 
   double get _subtotal {
     return widget.itens.fold<double>(0, (total, item) => total + item.subtotal);
@@ -112,13 +114,27 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
       }
 
       setState(() {
+        _registrandoDespesa = false;
+        _carrinhoSaindo = true;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 720));
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
         widget.itens.clear();
         _cupomTask10Aplicado = false;
         _controladorCupom.clear();
-        _registrandoDespesa = false;
+        _carrinhoSaindo = false;
+        _registroConcluido = true;
       });
 
-      _mostrarMensagem('Despesa registrada no financeiro.');
+      await Future.delayed(const Duration(milliseconds: 1300));
+      if (mounted) {
+        Navigator.of(context).pop(widget.itens);
+      }
     } catch (_) {
       if (!mounted) {
         return;
@@ -172,33 +188,41 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
               final padding = AppResponsive.pagePadding(width);
               final contentWidth = AppResponsive.maxContentWidth(width);
 
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: contentWidth),
-                    child: Padding(
-                      padding: padding,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _construirCabecalho(),
-                          const SizedBox(height: 24),
-                          if (widget.itens.isEmpty)
-                            _construirVazio()
-                          else ...[
-                            _construirListaItens(),
-                            const SizedBox(height: 18),
-                            _construirCupom(),
-                            const SizedBox(height: 18),
-                            _construirResumo(),
-                          ],
-                          const SizedBox(height: 28),
-                        ],
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 360),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: _carrinhoSaindo || _registroConcluido
+                    ? _construirAnimacaoFinalizacao()
+                    : SingleChildScrollView(
+                        key: const ValueKey('carrinho_conteudo'),
+                        physics: const BouncingScrollPhysics(),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: contentWidth),
+                            child: Padding(
+                              padding: padding,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _construirCabecalho(),
+                                  const SizedBox(height: 24),
+                                  if (widget.itens.isEmpty)
+                                    _construirVazio()
+                                  else ...[
+                                    _construirListaItens(),
+                                    const SizedBox(height: 18),
+                                    _construirCupom(),
+                                    const SizedBox(height: 18),
+                                    _construirResumo(),
+                                  ],
+                                  const SizedBox(height: 28),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
               );
             },
           ),
@@ -210,14 +234,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
   Widget _construirCabecalho() {
     return Row(
       children: [
-        IconButton(
-          onPressed: () => Navigator.of(context).pop(widget.itens),
-          style: IconButton.styleFrom(
-            backgroundColor: const Color(0xFF1A1F3A),
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(Icons.arrow_back),
-        ),
+        _botaoVoltar(),
         const SizedBox(width: 14),
         const Expanded(
           child: Column(
@@ -246,6 +263,25 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
             label: const Text('Limpar Tudo'),
           ),
       ],
+    );
+  }
+
+  Widget _botaoVoltar() {
+    return InkWell(
+      onTap: () => Navigator.of(context).pop(widget.itens),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+          ),
+        ),
+        child: const Icon(Icons.arrow_back, color: Color(0xFF6366F1)),
+      ),
     );
   }
 
@@ -483,6 +519,141 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
                     : 'Registrar como despesa',
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirAnimacaoFinalizacao() {
+    return SizedBox(
+      key: ValueKey(_carrinhoSaindo ? 'carrinho_saindo' : 'registro_sucesso'),
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: _carrinhoSaindo
+              ? _construirCarrinhoSaindo()
+              : _construirCheckSucesso(),
+        ),
+      ),
+    );
+  }
+
+  Widget _construirCarrinhoSaindo() {
+    return TweenAnimationBuilder<double>(
+      key: const ValueKey('animacao_carrinho_saida'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 680),
+      curve: Curves.easeInOutCubic,
+      builder: (context, value, child) {
+        final deslocamento = value * 170;
+        final opacidade = (1 - value * 0.55).clamp(0.0, 1.0);
+
+        return Opacity(
+          opacity: opacidade,
+          child: Transform.translate(
+            offset: Offset(deslocamento, 0),
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.shopping_cart_checkout_rounded,
+              color: Colors.white,
+              size: 46,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Registrando orçamento',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 23,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Enviando o total previsto para o financeiro.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirCheckSucesso() {
+    return TweenAnimationBuilder<double>(
+      key: const ValueKey('animacao_check_sucesso'),
+      tween: Tween<double>(begin: 0.82, end: 1),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.scale(scale: value, child: child);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF10B981), Color(0xFF34D399)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: Colors.white,
+              size: 46,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Despesa registrada',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'O orçamento foi enviado para o controle financeiro.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
           ),
         ],
       ),

@@ -497,7 +497,6 @@ class _TelaCadastroProdutoCompraState extends State<TelaCadastroProdutoCompra> {
           ),
           const SizedBox(height: 16),
           _construirCampoCategoria(),
-          const SizedBox(height: 16),
           _construirCampoTexto(
             controlador: _controladorPreco,
             label: 'Preço previsto',
@@ -667,7 +666,7 @@ class _TelaCadastroProdutoCompraState extends State<TelaCadastroProdutoCompra> {
                   });
                 },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Align(
           alignment: Alignment.centerLeft,
           child: AnimatedScale(
@@ -690,33 +689,49 @@ class _TelaCadastroProdutoCompraState extends State<TelaCadastroProdutoCompra> {
                       ]
                     : null,
               ),
-              child: OutlinedButton.icon(
-                onPressed: _salvando ? null : _abrirDialogNovaCategoria,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _categoriaAnimando
-                      ? const Color(0xFF6EE7B7)
-                      : Colors.white,
-                  side: BorderSide(
-                    color:
-                        (_categoriaAnimando
-                                ? const Color(0xFF10B981)
-                                : const Color(0xFF6366F1))
-                            .withValues(alpha: 0.55),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _categoriaAnimando
+                        ? [const Color(0xFF10B981), const Color(0xFF34D399)]
+                        : [const Color(0xFF312E81), const Color(0xFF4338CA)],
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
                   ),
                 ),
-                icon: Icon(
-                  _categoriaAnimando ? Icons.check_rounded : Icons.add,
-                  size: 18,
-                ),
-                label: Text(
-                  _categoriaAnimando
-                      ? 'Categoria adicionada'
-                      : 'Nova categoria',
+                child: FilledButton.icon(
+                  onPressed: _salvando ? null : _abrirDialogNovaCategoria,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    disabledBackgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 13,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  icon: Icon(
+                    _categoriaAnimando ? Icons.check_rounded : Icons.add,
+                    size: 18,
+                  ),
+                  label: Text(
+                    _categoriaAnimando
+                        ? 'Categoria adicionada'
+                        : 'Nova categoria',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
           ),
         ),
+        const SizedBox(height: 12),
       ],
     );
   }

@@ -144,14 +144,56 @@ class _TelaOrcamentoComprasState extends State<TelaOrcamentoCompras> {
   }
 
   Future<void> _abrirCarrinho() async {
-    await Navigator.of(context).push<List<ItemCarrinho>>(
-      _rotaSuave(
-        TelaCarrinhoCompras(
-          uid: widget.uid,
-          itens: _itensCarrinho,
-          onDespesaRegistrada: widget.onDespesaRegistrada,
-        ),
-      ),
+    await showGeneralDialog<List<ItemCarrinho>>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Fechar carrinho',
+      barrierColor: Colors.black.withValues(alpha: 0.48),
+      transitionDuration: const Duration(milliseconds: 380),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        final width = MediaQuery.of(context).size.width;
+        final panelWidth = width < 600
+            ? width * 0.94
+            : width < 1024
+            ? 520.0
+            : 560.0;
+
+        return Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(
+            width: panelWidth,
+            height: double.infinity,
+            child: ClipRRect(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(width < 600 ? 24 : 30),
+              ),
+              child: TelaCarrinhoCompras(
+                uid: widget.uid,
+                itens: _itensCarrinho,
+                onDespesaRegistrada: widget.onDespesaRegistrada,
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
 
     if (mounted) {
