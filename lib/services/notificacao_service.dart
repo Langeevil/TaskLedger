@@ -40,6 +40,9 @@ class NotificacaoService {
 
   bool _inicializado = false;
   bool _listenersConfigurados = false;
+  bool _inicializacaoConcluida = false;
+
+  bool get inicializacaoConcluida => _inicializacaoConcluida;
 
   Future<void> inicializar() async {
     if (_inicializado) {
@@ -59,6 +62,7 @@ class NotificacaoService {
     _configurarListeners();
     await _tratarMensagemInicial();
     await verificarNotificacoesInternasPendentes();
+    _inicializacaoConcluida = true;
   }
 
   Future<void> inicializarWebNotifications() async {

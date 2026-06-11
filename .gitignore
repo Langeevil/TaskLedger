@@ -49,3 +49,4 @@ app.*.map.json
 #Config
 /lib/main.dart
 /lib/config/*
+/web/firebase-messaging-sw.js
