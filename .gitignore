@@ -48,5 +48,4 @@ app.*.map.json
 
 #Config
 /lib/main.dart
-/lib/config/jsonbin_config.dart
-/lib/config/imgbb_config.dart
+/lib/config/*

@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../models/notificacao_interna.dart';
 import '../services/auth_service.dart';
 import '../services/dashboard_service.dart';
+import '../services/notificacao_service.dart';
 import '../services/user_service.dart';
 import '../utils/responsive_utils.dart';
 
@@ -24,6 +26,7 @@ class TelaDashboard extends StatefulWidget {
 class _TelaDashboardState extends State<TelaDashboard> {
   final _authService = AuthService();
   final _dashboardService = DashboardService();
+  final _notificacaoService = NotificacaoService.instance;
   final _userService = UserService();
 
   int _indiceTelaAtual = 0;
@@ -81,6 +84,8 @@ class _TelaDashboardState extends State<TelaDashboard> {
         _saldo = dashboardData.saldo;
         _carregando = false;
       });
+
+      _sincronizarNotificacoesDoDashboard();
     } catch (_) {
       if (!mounted) {
         return;
@@ -325,14 +330,39 @@ class _TelaDashboardState extends State<TelaDashboard> {
     }).toList();
   }
 
-  void _abrirAssuntoDaNotificacao(Map<String, dynamic> notificacao) {
-    Navigator.of(context).pop();
+  Future<void> _sincronizarNotificacoesDoDashboard() async {
+    final notificacoes = _obterNotificacoes();
 
+    for (final notificacao in notificacoes) {
+      final identificador = _identificadorNotificacao(notificacao);
+      final tipo = notificacao['tipo']?.toString() ?? '';
+
+      if (_notificacoesVisualizadas.contains(identificador)) {
+        continue;
+      }
+
+      await _notificacaoService.salvarNotificacaoInterna(
+        id: 'dashboard_${Uri.encodeComponent(identificador)}',
+        titulo: notificacao['titulo']?.toString() ?? 'Notificacao',
+        mensagem: notificacao['mensagem']?.toString() ?? '',
+        rota: tipo == 'tarefa' ? '/tarefas' : '/financas',
+        dados: {'tipo': tipo, 'origem': 'dashboard'},
+        visualizada: _notificacoesVisualizadas.contains(identificador),
+        uid: _usuarioAtual.uid,
+      );
+    }
+  }
+
+  void _abrirAssuntoDaNotificacao(Map<String, dynamic> notificacao) {
     final tipo = notificacao['tipo']?.toString() ?? '';
     final mensagem = notificacao['mensagem']?.toString() ?? '';
 
     setState(() {
-      _indiceTelaAtual = tipo == 'tarefa' ? 1 : 2;
+      if (tipo == 'tarefa') {
+        _indiceTelaAtual = 1;
+      } else if (tipo == 'financas') {
+        _indiceTelaAtual = 2;
+      }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -343,119 +373,181 @@ class _TelaDashboardState extends State<TelaDashboard> {
     );
   }
 
-  void _abrirCentralNotificacoes() {
-    final notificacoes = _obterNotificacoes();
+  Future<void> _abrirCentralNotificacoes() async {
+    final internas = await _notificacaoService.buscarNotificacoes(
+      uid: _usuarioAtual.uid,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    var notificacoes = internas.map(_mapearNotificacaoInterna).toList();
     final idsVisualizados = notificacoes.map(_identificadorNotificacao);
 
     setState(() {
       _notificacoesVisualizadas.addAll(idsVisualizados);
     });
     _salvarNotificacoesVisualizadas();
+    _notificacaoService.marcarTodasComoVisualizadas(uid: _usuarioAtual.uid);
 
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.72,
-            ),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0F1729),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 14),
-                Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              top: false,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.72,
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Notificações',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${notificacoes.length}',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.65),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0F1729),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
-                Expanded(
-                  child: notificacoes.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.notifications_none,
-                                  size: 56,
-                                  color: Colors.white.withOpacity(0.26),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Nenhuma notificação no momento',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Quando houver tarefas urgentes ou alertas financeiros, eles aparecerão aqui.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.6),
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
+                child: Column(
+                  children: [
+                    const SizedBox(height: 14),
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Notificações',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                          itemCount: notificacoes.length,
-                          itemBuilder: (context, index) {
-                            final notificacao = notificacoes[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _construirItemNotificacao(
-                                notificacao,
-                                onTap: () =>
-                                    _abrirAssuntoDaNotificacao(notificacao),
+                          Text(
+                            '${notificacoes.length}',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.65),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (notificacoes.isNotEmpty) ...[
+                            const SizedBox(width: 12),
+                            TextButton.icon(
+                              onPressed: () async {
+                                final removidas =
+                                    List<Map<String, dynamic>>.from(
+                                      notificacoes,
+                                    );
+                                setModalState(() {
+                                  notificacoes = [];
+                                });
+
+                                _notificacoesVisualizadas.addAll(
+                                  removidas.map(_identificadorNotificacao),
+                                );
+                                await _salvarNotificacoesVisualizadas();
+                                await _notificacaoService
+                                    .excluirTodasNotificacoes(
+                                      uid: _usuarioAtual.uid,
+                                    );
+                              },
+                              icon: const Icon(Icons.delete_sweep_outlined),
+                              label: const Text('Limpar'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFFF87171),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: notificacoes.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.notifications_none,
+                                      size: 56,
+                                      color: Colors.white.withOpacity(0.26),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Nenhuma notificação no momento',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Quando houver tarefas urgentes ou alertas financeiros, eles aparecerão aqui.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.6),
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              itemCount: notificacoes.length,
+                              itemBuilder: (context, index) {
+                                final notificacao = notificacoes[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _construirItemNotificacao(
+                                    notificacao,
+                                    onTap: () =>
+                                        _abrirAssuntoDaNotificacao(notificacao),
+                                    onDelete: () async {
+                                      final id = notificacao['_id']?.toString();
+                                      setModalState(() {
+                                        notificacoes = notificacoes
+                                            .where(
+                                              (item) => item != notificacao,
+                                            )
+                                            .toList();
+                                      });
+
+                                      _notificacoesVisualizadas.add(
+                                        _identificadorNotificacao(notificacao),
+                                      );
+                                      await _salvarNotificacoesVisualizadas();
+                                      if (id != null && id.isNotEmpty) {
+                                        await _notificacaoService
+                                            .excluirNotificacao(
+                                              id,
+                                              uid: _usuarioAtual.uid,
+                                            );
+                                      }
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -470,6 +562,34 @@ class _TelaDashboardState extends State<TelaDashboard> {
     } catch (_) {
       // A notificação continua marcada na sessão atual mesmo se a persistência falhar.
     }
+  }
+
+  Map<String, dynamic> _mapearNotificacaoInterna(
+    NotificacaoInterna notificacao,
+  ) {
+    final destino =
+        notificacao.rota ?? notificacao.dados?['tela']?.toString() ?? '';
+    final tipo = destino.contains('tarefa')
+        ? 'tarefa'
+        : destino.contains('orcamento') || destino.contains('financa')
+        ? 'financas'
+        : 'geral';
+
+    return {
+      '_id': notificacao.id,
+      'tipo': tipo,
+      'titulo': notificacao.titulo,
+      'mensagem': notificacao.mensagem,
+      'icone': tipo == 'tarefa'
+          ? Icons.task_alt
+          : tipo == 'financas'
+          ? Icons.local_offer_outlined
+          : Icons.notifications_none,
+      'cor': notificacao.visualizada
+          ? const Color(0xFF6366F1)
+          : const Color(0xFF8B5CF6),
+      'ordem': 4,
+    };
   }
 
   void _atualizarDadosPerfil(Map<String, dynamic> novosDados) {
@@ -971,9 +1091,76 @@ class _TelaDashboardState extends State<TelaDashboard> {
     );
   }
 
+  Widget _construirBotaoNotificacoes(int fallbackNaoVisualizadas) {
+    return StreamBuilder<List<NotificacaoInterna>>(
+      stream: _notificacaoService.observarNaoVisualizadas(
+        uid: _usuarioAtual.uid,
+      ),
+      builder: (context, snapshot) {
+        final total = snapshot.data?.length ?? fallbackNaoVisualizadas;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GestureDetector(
+              onTap: _abrirCentralNotificacoes,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF6366F1).withOpacity(0.3),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.notifications_none,
+                  color: Color(0xFF6366F1),
+                ),
+              ),
+            ),
+            if (total > 0)
+              Positioned(
+                right: -4,
+                top: -6,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: const Color(0xFF0F1729),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Text(
+                    total > 9 ? '9+' : '$total',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _construirItemNotificacao(
     Map<String, dynamic> notificacao, {
     required VoidCallback onTap,
+    VoidCallback? onDelete,
   }) {
     final cor = notificacao['cor'] as Color? ?? const Color(0xFF6366F1);
     final icone = notificacao['icone'] as IconData? ?? Icons.notifications_none;
@@ -1025,11 +1212,21 @@ class _TelaDashboardState extends State<TelaDashboard> {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: Colors.white.withOpacity(0.4),
-            ),
+            if (onDelete != null)
+              IconButton(
+                tooltip: 'Excluir notificacao',
+                onPressed: onDelete,
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: Colors.white.withOpacity(0.46),
+                ),
+              )
+            else
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: Colors.white.withOpacity(0.4),
+              ),
           ],
         ),
       ),
@@ -1129,66 +1326,7 @@ class _TelaDashboardState extends State<TelaDashboard> {
                             color: Colors.white,
                           ),
                         ),
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            GestureDetector(
-                              onTap: _abrirCentralNotificacoes,
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF6366F1,
-                                  ).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(
-                                      0xFF6366F1,
-                                    ).withOpacity(0.3),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.notifications_none,
-                                  color: Color(0xFF6366F1),
-                                ),
-                              ),
-                            ),
-                            if (notificacoes.isNotEmpty)
-                              Positioned(
-                                right: -4,
-                                top: -6,
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 20,
-                                    minHeight: 20,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: const Color(0xFF0F1729),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    notificacoes.length > 9
-                                        ? '9+'
-                                        : '${notificacoes.length}',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        _construirBotaoNotificacoes(notificacoes.length),
                       ],
                     ),
                   ),

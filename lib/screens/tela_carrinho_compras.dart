@@ -6,6 +6,62 @@ import '../services/transacao_service.dart';
 import '../utils/app_currency_utils.dart';
 import '../utils/responsive_utils.dart';
 
+enum TipoEntrega { retirada, padrao, expressa, regiaoDistante }
+
+double calcularCustoEntrega(TipoEntrega tipo) {
+  switch (tipo) {
+    case TipoEntrega.retirada:
+      return 0.0;
+    case TipoEntrega.padrao:
+      return 9.90;
+    case TipoEntrega.expressa:
+      return 19.90;
+    case TipoEntrega.regiaoDistante:
+      return 29.90;
+  }
+}
+
+extension TipoEntregaDetalhes on TipoEntrega {
+  String get rotulo {
+    switch (this) {
+      case TipoEntrega.retirada:
+        return 'Retirada grátis';
+      case TipoEntrega.padrao:
+        return 'Entrega padrão';
+      case TipoEntrega.expressa:
+        return 'Entrega expressa';
+      case TipoEntrega.regiaoDistante:
+        return 'Região distante';
+    }
+  }
+
+  String get descricao {
+    switch (this) {
+      case TipoEntrega.retirada:
+        return 'Sem custo adicional para retirar os itens.';
+      case TipoEntrega.padrao:
+        return 'Entrega planejada com custo reduzido.';
+      case TipoEntrega.expressa:
+        return 'Prioridade maior para receber os itens.';
+      case TipoEntrega.regiaoDistante:
+        return 'Custo extra para locais mais afastados.';
+    }
+  }
+
+  IconData get icone {
+    switch (this) {
+      case TipoEntrega.retirada:
+        return Icons.storefront_outlined;
+      case TipoEntrega.padrao:
+        return Icons.local_shipping_outlined;
+      case TipoEntrega.expressa:
+        return Icons.bolt_outlined;
+      case TipoEntrega.regiaoDistante:
+        return Icons.map_outlined;
+    }
+  }
+}
+
 class TelaCarrinhoCompras extends StatefulWidget {
   const TelaCarrinhoCompras({
     super.key,
@@ -25,6 +81,7 @@ class TelaCarrinhoCompras extends StatefulWidget {
 class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
   final _transacaoService = TransacaoService();
   final _controladorCupom = TextEditingController();
+  TipoEntrega _tipoEntrega = TipoEntrega.retirada;
   bool _cupomTask10Aplicado = false;
   bool _registrandoDespesa = false;
   bool _carrinhoSaindo = false;
@@ -36,7 +93,21 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
 
   double get _desconto => _cupomTask10Aplicado ? _subtotal * 0.1 : 0;
 
-  double get _total => _subtotal - _desconto;
+  double get _custoEntrega {
+    if (widget.itens.isEmpty) {
+      return 0;
+    }
+
+    return calcularCustoEntrega(_tipoEntrega);
+  }
+
+  double get _total {
+    if (widget.itens.isEmpty) {
+      return 0;
+    }
+
+    return _subtotal + _custoEntrega - _desconto;
+  }
 
   @override
   void dispose() {
@@ -69,6 +140,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
     setState(() {
       widget.itens.clear();
       _cupomTask10Aplicado = false;
+      _tipoEntrega = TipoEntrega.retirada;
       _controladorCupom.clear();
     });
   }
@@ -126,6 +198,7 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
       setState(() {
         widget.itens.clear();
         _cupomTask10Aplicado = false;
+        _tipoEntrega = TipoEntrega.retirada;
         _controladorCupom.clear();
         _carrinhoSaindo = false;
         _registroConcluido = true;
@@ -158,7 +231,11 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
         ? '\nDesconto aplicado: ${AppCurrencyUtils.format(_desconto)}'
         : '';
 
-    return 'Registrado a partir do carrinho de orçamento.\n$linhas$desconto';
+    final entrega =
+        '\nEntrega: ${_tipoEntrega.rotulo}. '
+        'Custo de entrega: ${AppCurrencyUtils.format(_custoEntrega)}.';
+
+    return 'Registrado a partir do carrinho de orçamento.\n$linhas$entrega$desconto';
   }
 
   void _mostrarMensagem(String mensagem, {bool erro = false}) {
@@ -211,6 +288,8 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
                                     _construirVazio()
                                   else ...[
                                     _construirListaItens(),
+                                    const SizedBox(height: 18),
+                                    _construirEntregaDeslocamento(),
                                     const SizedBox(height: 18),
                                     _construirCupom(),
                                     const SizedBox(height: 18),
@@ -414,6 +493,153 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
     );
   }
 
+  Widget _construirEntregaDeslocamento() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F3A).withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.delivery_dining_outlined,
+                  color: Color(0xFFC4B5FD),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entrega / Deslocamento',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Escolha o custo previsto para este orçamento.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...TipoEntrega.values.map(
+            (tipo) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _construirOpcaoEntrega(tipo),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirOpcaoEntrega(TipoEntrega tipo) {
+    final selecionado = _tipoEntrega == tipo;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _tipoEntrega = tipo;
+        });
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selecionado
+              ? const Color(0xFF6366F1).withValues(alpha: 0.22)
+              : const Color(0xFF0F1729).withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selecionado
+                ? const Color(0xFF8B5CF6)
+                : const Color(0xFF6366F1).withValues(alpha: 0.18),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFF8B5CF6,
+                ).withValues(alpha: selecionado ? 0.28 : 0.14),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(tipo.icone, color: Colors.white, size: 21),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tipo.rotulo,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    tipo.descricao,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.62),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              AppCurrencyUtils.format(calcularCustoEntrega(tipo)),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Icon(
+              selecionado
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: selecionado
+                  ? const Color(0xFFC4B5FD)
+                  : Colors.white.withValues(alpha: 0.45),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _construirCupom() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -469,13 +695,14 @@ class _TelaCarrinhoComprasState extends State<TelaCarrinhoCompras> {
       ),
       child: Column(
         children: [
+          _construirLinhaResumo('Subtotal', AppCurrencyUtils.format(_subtotal)),
           _construirLinhaResumo(
-            'Subtotal geral',
-            AppCurrencyUtils.format(_subtotal),
+            'Custo de entrega',
+            AppCurrencyUtils.format(_custoEntrega),
           ),
           if (_cupomTask10Aplicado)
             _construirLinhaResumo(
-              'Desconto TASK10',
+              'Desconto',
               '- ${AppCurrencyUtils.format(_desconto)}',
             ),
           Container(
